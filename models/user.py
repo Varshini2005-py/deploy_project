@@ -183,8 +183,23 @@ def get_all_employees():
 
 
 def seed_users():
-    pass  # Default seed users removed — register users via the admin panel
+    if not get_user_by_email("manager@company.com"):
+        create_user(
+            "Manager User",
+            "manager@company.com",
+            "Manager@123",
+            "manager"
+        )
+        print("[SEED] Manager created")
 
+    if not get_user_by_email("keerthi@company.com"):
+        create_user(
+            "Keerthi",
+            "keerthi@company.com",
+            "Employee@123",
+            "employee"
+        )
+        print("[SEED] Employee created")
 def normalize_existing_emails():
     """One-time migration: lowercase all emails already in DB.
     Call once from app startup or run manually if users were created with mixed-case emails."""
@@ -279,11 +294,16 @@ def get_system_stats():
         "high_risk_events": logs_col.count_documents({"risk_level": "HIGH"}),
         "blocked_actions": events_col.count_documents({"blocked": True}),
     }
-
+    
 
 def seed_admin():
-    pass  # Default seed admin removed — create admin via DB or admin panel
-
+    if not get_user_by_email("admin@company.com"):
+        create_admin(
+            "System Admin",
+            "admin@company.com",
+            "Admin@123"
+        )
+        print("[SEED] Admin created")
 
 # ── DEVICE FINGERPRINT ────────────────────────────────────────────────────────
 
