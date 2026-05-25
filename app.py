@@ -144,7 +144,11 @@ class _ActiveTokens:
         return self._cache.items()
 
 
-active_tokens = _ActiveTokens()
+try:
+    active_tokens = _ActiveTokens()
+except Exception as e:
+    print("[APP] active_tokens init error: " + str(e))
+    active_tokens = {}
 
 # ── Meeting & Client blueprints ───────────────────────────────
 from routes.meetings           import meetings_bp
@@ -2716,7 +2720,11 @@ class _FileViewingUsers:
         return self._cache.items()
 
 
-file_viewing_users = _FileViewingUsers()
+try:
+    file_viewing_users = _FileViewingUsers()
+except Exception as e:
+    print("[APP] file_viewing_users init error: " + str(e))
+    file_viewing_users = {}
 
 # Latest webcam JPEG per user — pushed by monitor.py, polled by browser
 _cam_frames = {}
