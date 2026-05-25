@@ -3402,6 +3402,12 @@ def employee_notifications():
 
 
 # --- Run ----------------------------------------------------------------------
+try:
+    seed_admin()
+    seed_users()
+    print("[SEED] Default users checked")
+except Exception as e:
+    print("[SEED ERROR]", str(e))
 if __name__ == "__main__":
     print("=" * 60)
     print("  XAI-ITD-DLP Framework - Module 1 Starting...")
