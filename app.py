@@ -258,36 +258,41 @@ def get_location_from_ip(ip):
             return {"city": "Unknown", "region": "", "country": "Unknown", "ip": "127.0.0.1", "lat": None, "lon": None, "org": ""}
     return _lookup_ip_location(ip)
 
-
 def send_otp_email(to_email, otp, name):
     try:
+        TEST_EMAIL = "mahalakshmimv1005@gmail.com"
+
         msg = MIMEMultipart("alternative")
-        msg["Subject"] = " XAI-ITD-DLP Login OTP"
+        msg["Subject"] = "XAI-ITD-DLP Login OTP"
         msg["From"] = SMTP_EMAIL
-        msg["To"] = to_email
+        msg["To"] = TEST_EMAIL
+
         html = """
         <div style="font-family:monospace;background:#0a0a0f;color:#00ff88;padding:30px;border-radius:10px;max-width:500px">
           <h2 style="color:#00ff88;letter-spacing:3px;">XAI-ITD-DLP SYSTEM</h2>
           <p>Hello <strong>{name}</strong>,</p>
+          <p>Login Email: <strong>{user_email}</strong></p>
           <p>Your one-time login code:</p>
           <div style="font-size:40px;font-weight:bold;letter-spacing:10px;color:#fff;
                       background:#111;padding:20px;border-radius:8px;text-align:center;
                       border:2px solid #00ff88;">{otp}</div>
-          <p style="color:#888;margin-top:20px;"> Expires in 2 minutes. Do not share this code.</p>
-          <p style="color:#ff4444;">If you did not request this, contact your administrator immediately.</p>
+          <p style="color:#888;margin-top:20px;">Expires in 2 minutes.</p>
         </div>
-        """.format(name=name, otp=otp)
+        """.format(name=name, otp=otp, user_email=to_email)
+
         msg.attach(MIMEText(html, "html"))
+
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
             server.starttls()
             server.login(SMTP_EMAIL, SMTP_PASSWORD)
-            server.sendmail(SMTP_EMAIL, to_email, msg.as_string())
-        print("[EMAIL] OTP sent successfully to " + to_email)
+            server.sendmail(SMTP_EMAIL, TEST_EMAIL, msg.as_string())
+
+        print("[EMAIL] OTP sent to " + TEST_EMAIL + " for user " + to_email)
         return True
+
     except Exception as e:
         print("[EMAIL ERROR] " + str(e))
         return False
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # MEETING INVITE EMAIL
