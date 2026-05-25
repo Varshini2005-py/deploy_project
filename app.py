@@ -3394,7 +3394,7 @@ def employee_notifications():
 
 
 # --- Run ----------------------------------------------------------------------
-  if __name__ == "__main__":
+if __name__ == "__main__":
     print("=" * 60)
     print("  XAI-ITD-DLP Framework - Module 1 Starting...")
     print("=" * 60)
