@@ -2683,7 +2683,10 @@ def ai_risk_scores():
 
 # ── File viewing state — MongoDB-backed so agent polling survives restarts ──
 _fv_col = _users_col_ref.database["file_viewing_state"]
-_fv_col.create_index("email", unique=True)
+try:
+    _fv_col.create_index("email", unique=True)
+except Exception:
+    pass
 
 
 class _FileViewingUsers:
@@ -2864,9 +2867,11 @@ def check_sensitive_keywords(text):
 from pymongo import DESCENDING as _DESC
 _mail_db = users_col.database
 messages_col = _mail_db["messages"]
-messages_col.create_index([("to", 1), ("sent_at", _DESC)])
-messages_col.create_index([("from_email", 1), ("sent_at", _DESC)])
-
+try:
+    messages_col.create_index([("to", 1), ("sent_at", _DESC)])
+    messages_col.create_index([("from_email", 1), ("sent_at", _DESC)])
+except Exception:
+    pass
 
 def compute_file_hash(filepath):
     h = hashlib.sha256()
@@ -3389,11 +3394,14 @@ def employee_notifications():
 
 
 # --- Run ----------------------------------------------------------------------
-if __name__ == "__main__":
+  if __name__ == "__main__":
     print("=" * 60)
     print("  XAI-ITD-DLP Framework - Module 1 Starting...")
     print("=" * 60)
-    normalize_existing_emails()
+    try:
+        normalize_existing_emails()
+    except Exception as e:
+        print("[APP] normalize_existing_emails error: " + str(e))
     print("[APP] Visit: http://127.0.0.1:5000")
     from ml.scheduler import start_scheduler
     start_scheduler(socketio_instance=socketio)
