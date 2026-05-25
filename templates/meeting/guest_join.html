@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Join Meeting — XAI-ITD-DLP</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<script src="https://meet.jit.si/external_api.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:      #0a0f1e;
+    --surface: #0f1729;
+    --border:  #1e2d45;
+    --text:    #e2e8f0;
+    --muted:   #64748b;
+    --green:   #00ff88;
+    --blue:    #0088ff;
+    --red:     #ff3366;
+    --yellow:  #ffcc00;
+    --mono:    'Share Tech Mono', monospace;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ── LOGIN SCREEN ── */
+  #join-screen {
+    width: 100%;
+    max-width: 440px;
+    padding: 20px;
+  }
+  .logo {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .logo-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 14px;
+    letter-spacing: 4px;
+    color: var(--green);
+    margin-bottom: 6px;
+  }
+  .logo-sub {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px 24px;
+  }
+  .meeting-info {
+    background: rgba(0,136,255,0.06);
+    border: 1px solid rgba(0,136,255,0.2);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 22px;
+  }
+  .meeting-info-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .meeting-info-row {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: var(--mono);
+    margin-top: 4px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .meeting-info-row span { color: var(--text); }
+  .field-label {
+    font-size: 10px;
+    color: var(--muted);
+    font-family: var(--mono);
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+  }
+  .field-wrap { margin-bottom: 14px; }
+  input[type="text"], input[type="password"] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input:focus { border-color: var(--blue); }
+  .btn-join {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(135deg, rgba(0,136,255,0.2), rgba(0,255,136,0.2));
+    border: 1px solid rgba(0,136,255,0.5);
+    border-radius: 8px;
+    color: var(--blue);
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-top: 4px;
+  }
+  .btn-join:hover {
+    background: linear-gradient(135deg, rgba(0,136,255,0.3), rgba(0,255,136,0.3));
+    border-color: var(--green);
+    color: var(--green);
+  }
+  .btn-join:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .msg {
+    margin-top: 10px;
+    font-size: 12px;
+    font-family: var(--mono);
+    text-align: center;
+    min-height: 18px;
+  }
+  .security-note {
+    margin-top: 18px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--muted);
+    font-family: var(--mono);
+    line-height: 1.6;
+  }
+
+  /* ── MEETING ROOM ── */
+  #room-screen {
+    display: none;
+    width: 100vw;
+    height: 100vh;
+    flex-direction: column;
+  }
+  #room-screen.active {
+    display: flex;
+  }
+  .room-header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .room-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .room-badge {
+    background: rgba(0,255,136,0.1);
+    border: 1px solid rgba(0,255,136,0.3);
+    border-radius: 6px;
+    padding: 3px 10px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--green);
+    letter-spacing: 1px;
+  }
+  .room-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .room-sub {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+  .live-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--green);
+    border-radius: 50%;
+    animation: pulse 1.5s infinite;
+    flex-shrink: 0;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.5; transform: scale(0.8); }
+  }
+  #jitsi-container {
+    flex: 1;
+    width: 100%;
+    background: #000;
+  }
+  .btn-leave {
+    padding: 7px 16px;
+    background: rgba(255,51,102,0.15);
+    border: 1px solid rgba(255,51,102,0.4);
+    border-radius: 6px;
+    color: var(--red);
+    font-family: var(--mono);
+    font-size: 11px;
+    cursor: pointer;
+    letter-spacing: 1px;
+  }
+  .btn-leave:hover {
+    background: rgba(255,51,102,0.25);
+  }
+
+  /* ── ENDED SCREEN ── */
+  #ended-screen {
+    display: none;
+    text-align: center;
+    padding: 40px 20px;
+  }
+  #ended-screen.active { display: block; }
+  .ended-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+  }
+  .ended-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 16px;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+  .ended-sub {
+    font-size: 13px;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+</style>
+</head>
+<body>
+
+<!-- JOIN SCREEN -->
+<div id="join-screen">
+  <div class="logo">
+    <div class="logo-title">XAI · ITD · DLP</div>
+    <div class="logo-sub">SECURE CLIENT MEETING PORTAL</div>
+  </div>
+
+  <div class="card">
+    <!-- Meeting info loaded dynamically -->
+    <div class="meeting-info" id="meeting-info-box">
+      <div class="meeting-info-title" id="meeting-title">Loading meeting details...</div>
+      <div class="meeting-info-row" id="meeting-time"></div>
+      <div class="meeting-info-row" id="meeting-host"></div>
+      <div class="meeting-info-row" id="meeting-agenda"></div>
+    </div>
+
+    <div class="field-wrap">
+      <div class="field-label">YOUR NAME</div>
+      <input type="text" id="guest-name" placeholder="Enter your full name">
+    </div>
+    <div class="field-wrap">
+      <div class="field-label">MEETING PASSWORD</div>
+      <input type="password" id="guest-password" placeholder="Enter password provided by host"
+             onkeydown="if(event.key==='Enter') joinMeeting()">
+    </div>
+
+    <button class="btn-join" id="join-btn" onclick="joinMeeting()">
+      JOIN MEETING
+    </button>
+    <div class="msg" id="join-msg"></div>
+
+    <div class="security-note">
+      🔒 This meeting is monitored and recorded per company policy.<br>
+      By joining you agree to the terms of this secure session.
+    </div>
+  </div>
+</div>
+
+<!-- ROOM SCREEN -->
+<div id="room-screen">
+  <div class="room-header">
+    <div class="room-header-left">
+      <div class="live-dot"></div>
+      <div>
+        <div class="room-title" id="room-header-title">Client Meeting</div>
+        <div class="room-sub" id="room-header-sub"></div>
+      </div>
+      <div class="room-badge">LIVE</div>
+    </div>
+    <button class="btn-leave" onclick="leaveMeeting()">⬛ LEAVE</button>
+  </div>
+  <div id="jitsi-container"></div>
+</div>
+
+<!-- ENDED SCREEN -->
+<div id="ended-screen">
+  <div class="ended-icon">✅</div>
+  <div class="ended-title">Meeting Ended</div>
+  <div class="ended-sub">Thank you for joining. You may close this window.</div>
+</div>
+
+<script>
+const ROOM_ID = "{{ room_id }}";
+const SERVER  = window.location.origin;
+var _meeting  = null;
+var jitsiApi  = null;
+
+// ── Load meeting details on page load ────────────────────────
+window.addEventListener('DOMContentLoaded', async function() {
+  try {
+    var res  = await fetch(SERVER + '/api/guest/meeting-info/' + ROOM_ID);
+    var data = await res.json();
+    if (data.error) {
+      document.getElementById('meeting-title').textContent = data.error;
+      document.getElementById('join-btn').disabled = true;
+      return;
+    }
+    _meeting = data;
+    document.getElementById('meeting-title').textContent   = data.title;
+    document.getElementById('meeting-time').innerHTML      = '🕐 <span>' + (data.scheduled_time || 'Scheduled') + '</span>';
+    document.getElementById('meeting-host').innerHTML      = '👤 <span>Host: ' + data.host_name + '</span>';
+    document.getElementById('meeting-agenda').innerHTML    = '📋 <span>' + (data.agenda || '') + '</span>';
+    document.getElementById('room-header-title').textContent = data.title;
+    document.getElementById('room-header-sub').textContent   = 'Room: ' + ROOM_ID + ' · ' + data.host_name;
+  } catch(e) {
+    document.getElementById('meeting-title').textContent = 'Could not load meeting details.';
+  }
+});
+
+// ── Join ─────────────────────────────────────────────────────
+async function joinMeeting() {
+  var name     = document.getElementById('guest-name').value.trim();
+  var password = document.getElementById('guest-password').value.trim();
+  var msgEl    = document.getElementById('join-msg');
+
+  if (!name)     { msgEl.style.color='var(--red)'; msgEl.textContent='Please enter your name.'; return; }
+  if (!password) { msgEl.style.color='var(--red)'; msgEl.textContent='Please enter the meeting password.'; return; }
+
+  msgEl.style.color = 'var(--muted)';
+  msgEl.textContent = 'Verifying...';
+  document.getElementById('join-btn').disabled = true;
+
+  try {
+    var res  = await fetch(SERVER + '/api/guest/join/' + ROOM_ID, {
+      method:  'POST',
+      headers: {'Content-Type': 'application/json'},
+      body:    JSON.stringify({ name: name, password: password })
+    });
+    var data = await res.json();
+
+    if (data.success) {
+      msgEl.textContent = '';
+      startRoom(name);
+    } else {
+      msgEl.style.color = 'var(--red)';
+      msgEl.textContent = '✗ ' + (data.error || 'Invalid password.');
+      document.getElementById('join-btn').disabled = false;
+    }
+  } catch(e) {
+    msgEl.style.color = 'var(--red)';
+    msgEl.textContent = '✗ Connection error. Please try again.';
+    document.getElementById('join-btn').disabled = false;
+  }
+}
+
+// ── Start Jitsi room ─────────────────────────────────────────
+function startRoom(guestName) {
+  document.getElementById('join-screen').style.display = 'none';
+  document.getElementById('room-screen').classList.add('active');
+
+  jitsiApi = new JitsiMeetExternalAPI("meet.jit.si", {
+    roomName:   "xailtddlp" + ROOM_ID,
+    width:      "100%",
+    height:     "100%",
+    parentNode: document.getElementById("jitsi-container"),
+    userInfo:   { displayName: guestName + " (Client)" },
+    configOverwrite: {
+      startWithAudioMuted: false,
+      startWithVideoMuted: false,
+      disableDeepLinking:  true,
+      enableWelcomePage:   false,
+      prejoinPageEnabled:  false,
+      requireDisplayName:  false,
+      enableLobbyChat:     false,
+      hiddenPremeetingButtons: ['invite'],
+      disableInviteFunctions: true,
+    },
+    interfaceConfigOverwrite: {
+      SHOW_JITSI_WATERMARK:  false,
+      SHOW_BRAND_WATERMARK:  false,
+      SHOW_PROMOTIONAL_CLOSE_PAGE: false,
+      TOOLBAR_BUTTONS: ["microphone","camera","desktop","fullscreen","hangup","chat","settings","videoquality"],
+    }
+  });
+
+  jitsiApi.addEventListener("videoConferenceLeft", function() { leaveMeeting(); });
+  jitsiApi.addEventListener("readyToClose",        function() { leaveMeeting(); });
+}
+
+// ── Leave ─────────────────────────────────────────────────────
+function leaveMeeting() {
+  if (jitsiApi) { try { jitsiApi.dispose(); } catch(e) {} jitsiApi = null; }
+  document.getElementById('room-screen').classList.remove('active');
+  document.getElementById('ended-screen').classList.add('active');
+}
+</script>
+</body>
+</html>

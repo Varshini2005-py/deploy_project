@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meeting Room — {{ meeting.title }}</title>
+<script src="https://meet.jit.si/external_api.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0a0e1a; --surface:#111827; --surface2:#1a2235; --border:#1e2d45;
+    --accent:#3b82f6; --green:#10b981; --yellow:#f59e0b; --red:#ef4444;
+    --text:#e2e8f0; --muted:#64748b; --radius:12px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif;
+    height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+
+  .room-header { display:flex; align-items:center; justify-content:space-between;
+    padding:10px 20px; border-bottom:1px solid var(--border); background:var(--surface); flex-shrink:0; }
+  .room-title { font-family:'Syne',sans-serif; font-weight:800; font-size:16px; }
+  .room-id-text { font-size:11px; color:var(--muted); margin-top:2px; }
+  .room-controls { display:flex; gap:8px; align-items:center; }
+  .ctrl-btn { padding:8px 14px; border-radius:8px; border:none; cursor:pointer;
+    font-family:'DM Sans',sans-serif; font-size:12px; font-weight:600; transition:all 0.2s; }
+  .ctrl-primary { background:var(--accent); color:white; }
+  .ctrl-danger  { background:var(--red); color:white; }
+  .ctrl-ghost   { background:transparent; color:var(--muted); border:1px solid var(--border); }
+  .ctrl-ghost:hover { background:var(--surface2); color:var(--text); }
+  .live-badge { padding:4px 10px; background:rgba(239,68,68,0.15); color:var(--red);
+    border:1px solid rgba(239,68,68,0.3); border-radius:20px; font-size:11px; font-weight:700;
+    display:flex; align-items:center; gap:5px; }
+  .live-dot { width:7px; height:7px; border-radius:50%; background:var(--red); animation:pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .room-body { display:flex; flex:1; overflow:hidden; }
+  .jitsi-wrap { flex:1; position:relative; }
+  #jitsi-container { width:100%; height:100%; }
+  .recording-notice { display:none; position:absolute; top:12px; left:50%; transform:translateX(-50%);
+    background:rgba(239,68,68,0.9); color:white; padding:6px 14px; border-radius:20px;
+    font-size:12px; font-weight:700; z-index:100; }
+  .recording-notice.show { display:block; }
+
+  .side-panel { width:320px; border-left:1px solid var(--border); display:flex;
+    flex-direction:column; background:var(--surface); flex-shrink:0; }
+  .panel-tabs { display:flex; border-bottom:1px solid var(--border); }
+  .ptab { flex:1; padding:10px 4px; text-align:center; font-size:10px; font-weight:700;
+    text-transform:uppercase; letter-spacing:0.5px; cursor:pointer; color:var(--muted);
+    border-bottom:2px solid transparent; transition:all 0.2s; }
+  .ptab.active { color:var(--accent); border-bottom-color:var(--accent); }
+  .panel-content { flex:1; overflow:hidden; position:relative; }
+  .panel-view { display:none; flex-direction:column; height:100%; overflow:hidden; }
+  .panel-view.active { display:flex; }
+
+  /* CHAT */
+  .chat-messages { flex:1; overflow-y:auto; padding:12px; display:flex; flex-direction:column; gap:8px; }
+  .chat-msg { background:var(--surface2); border-radius:10px; padding:9px 12px; }
+  .chat-msg-header { display:flex; justify-content:space-between; margin-bottom:3px; }
+  .chat-msg-name { font-size:11px; font-weight:700; color:var(--accent); }
+  .chat-msg-time { font-size:10px; color:var(--muted); }
+  .chat-msg-text { font-size:13px; line-height:1.5; }
+  .chat-input-row { padding:10px; border-top:1px solid var(--border); display:flex; gap:8px; }
+  .chat-input { flex:1; background:var(--bg); border:1px solid var(--border); border-radius:8px;
+    padding:8px 11px; color:var(--text); font-family:'DM Sans',sans-serif; font-size:13px; outline:none; }
+  .chat-input:focus { border-color:var(--accent); }
+  .send-btn { padding:8px 13px; background:var(--accent); border:none; border-radius:8px;
+    color:white; cursor:pointer; font-weight:700; font-size:13px; }
+
+  /* PARTICIPANTS */
+  .hand-queue { padding:10px 12px; border-bottom:1px solid var(--border); display:none; }
+  .hand-queue.show { display:block; }
+  .hand-queue-title { font-size:10px; font-weight:700; color:var(--yellow);
+    text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; }
+  .hand-item { font-size:12px; color:var(--text); padding:3px 0;
+    display:flex; align-items:center; gap:6px; }
+  .participants-list { flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:6px; }
+  .participant-row { display:flex; align-items:center; gap:9px; padding:9px 11px;
+    background:var(--surface2); border-radius:9px; }
+  .p-avatar { width:32px; height:32px; border-radius:50%;
+    background:linear-gradient(135deg,var(--accent),#06b6d4);
+    display:flex; align-items:center; justify-content:center;
+    font-weight:700; font-size:11px; flex-shrink:0; }
+  .p-name { font-size:13px; font-weight:600; }
+  .p-role { font-size:10px; color:var(--muted); }
+  .host-controls { display:flex; gap:3px; margin-left:auto; }
+  .hc-btn { padding:3px 7px; border-radius:4px; border:none; cursor:pointer; font-size:9px; font-weight:700; }
+  .hc-mute   { background:rgba(245,158,11,0.2); color:var(--yellow); }
+  .hc-remove { background:rgba(239,68,68,0.2);  color:var(--red); }
+  .waiting-section { padding:10px; border-top:1px solid var(--border); }
+  .waiting-title { font-size:10px; font-weight:700; text-transform:uppercase;
+    color:var(--muted); letter-spacing:0.5px; margin-bottom:6px; }
+  .waiting-row { display:flex; align-items:center; justify-content:space-between;
+    padding:7px 9px; background:rgba(245,158,11,0.08);
+    border:1px solid rgba(245,158,11,0.2); border-radius:7px; margin-bottom:5px; }
+  .admit-btn { padding:3px 9px; background:var(--green); border:none; border-radius:4px;
+    color:white; font-size:10px; font-weight:700; cursor:pointer; }
+
+  /* NOTES */
+  .notes-area { flex:1; padding:10px; display:flex; flex-direction:column; gap:8px; }
+  .notes-textarea { flex:1; background:var(--bg); border:1px solid var(--border); border-radius:8px;
+    padding:10px; color:var(--text); font-family:'DM Sans',sans-serif; font-size:13px;
+    resize:none; outline:none; line-height:1.6; }
+  .notes-textarea:focus { border-color:var(--accent); }
+  .notes-footer { padding:0 10px 10px; }
+  .save-btn { width:100%; padding:8px; background:var(--green); border:none; border-radius:7px;
+    color:white; font-family:'DM Sans',sans-serif; font-weight:700; cursor:pointer; font-size:12px; }
+
+  /* POLLS */
+  .polls-area { flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:10px; }
+  .poll-card { background:var(--surface2); border-radius:10px; padding:13px; }
+  .poll-question { font-size:13px; font-weight:700; margin-bottom:10px; }
+  .poll-option { padding:8px 11px; background:var(--bg); border:1px solid var(--border);
+    border-radius:7px; margin-bottom:6px; cursor:pointer; font-size:12px; transition:all 0.2s; }
+  .poll-option:hover { border-color:var(--accent); }
+  .poll-option.voted { border-color:var(--green); background:rgba(16,185,129,0.08); }
+  .vote-bar { height:3px; background:var(--accent); border-radius:2px; margin-top:4px; transition:width 0.5s; }
+  .polls-footer { padding:10px; border-top:1px solid var(--border); }
+  .poll-input { width:100%; background:var(--bg); border:1px solid var(--border); border-radius:7px;
+    padding:7px 10px; color:var(--text); font-family:'DM Sans',sans-serif; font-size:12px;
+    outline:none; margin-bottom:6px; }
+  .create-poll-btn { width:100%; padding:8px; background:var(--accent); border:none; border-radius:7px;
+    color:white; font-weight:700; cursor:pointer; font-family:'DM Sans',sans-serif; font-size:12px; }
+
+  /* ACTIONS */
+  .actions-area { flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:7px; }
+  .action-row { background:var(--surface2); border-radius:8px; padding:10px 12px; }
+  .action-task-text { font-size:12px; font-weight:600; margin-bottom:2px; }
+  .action-assignee { font-size:10px; color:var(--muted); }
+  .actions-footer { padding:10px; border-top:1px solid var(--border); }
+  .action-inp { width:100%; background:var(--bg); border:1px solid var(--border); border-radius:7px;
+    padding:7px 10px; color:var(--text); font-family:'DM Sans',sans-serif; font-size:12px;
+    outline:none; margin-bottom:6px; }
+
+  /* FEEDBACK */
+  .feedback-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85);
+    z-index:999; align-items:center; justify-content:center; }
+  .feedback-overlay.open { display:flex; }
+  .feedback-card { background:var(--surface); border:1px solid var(--border); border-radius:18px;
+    padding:32px; width:90%; max-width:420px; }
+  .feedback-card h2 { font-family:'Syne',sans-serif; font-size:20px; font-weight:800; margin-bottom:6px; }
+  .feedback-card p { color:var(--muted); font-size:13px; margin-bottom:22px; }
+  .stars { display:flex; gap:8px; margin:8px 0 16px; }
+  .star { font-size:26px; cursor:pointer; filter:grayscale(1); transition:filter 0.15s; }
+  .star.active { filter:grayscale(0); }
+  .yn-row { display:flex; gap:10px; margin:8px 0 16px; }
+  .yn-btn { flex:1; padding:10px; border-radius:9px; border:1px solid var(--border);
+    cursor:pointer; background:transparent; color:var(--text);
+    font-family:'DM Sans',sans-serif; font-weight:600; font-size:14px; transition:all 0.2s; }
+  .yn-btn.selected-yes { background:rgba(16,185,129,0.15); border-color:var(--green); color:var(--green); }
+  .yn-btn.selected-no  { background:rgba(239,68,68,0.15);  border-color:var(--red);   color:var(--red); }
+  .fb-textarea { width:100%; background:var(--bg); border:1px solid var(--border); border-radius:8px;
+    padding:10px; color:var(--text); font-family:'DM Sans',sans-serif; font-size:13px;
+    outline:none; resize:vertical; min-height:70px; margin-bottom:16px; }
+  .submit-fb { width:100%; padding:11px; background:var(--accent); border:none; border-radius:9px;
+    color:white; font-family:'DM Sans',sans-serif; font-weight:700; font-size:14px; cursor:pointer; }
+
+  /* Invite picker in action panel */
+  .user-select { width:100%; background:var(--bg); border:1px solid var(--border); border-radius:7px;
+    padding:7px 10px; color:var(--text); font-family:'DM Sans',sans-serif; font-size:12px;
+    outline:none; margin-bottom:6px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="room-header">
+  <div>
+    <div class="room-title" id="room-title">{{ meeting.title }}</div>
+    <div class="room-id-text">Room: {{ meeting.room_id }} &nbsp;·&nbsp; {{ meeting.type }}</div>
+  </div>
+  <div class="room-controls">
+    <div class="live-badge" id="live-badge" style="display:none">
+      <span class="live-dot"></span> LIVE
+    </div>
+    <button class="ctrl-btn ctrl-ghost" id="raise-hand-btn" onclick="toggleRaiseHand()">✋ Raise Hand</button>
+    <button class="ctrl-btn ctrl-primary" id="record-btn" onclick="toggleRecording()" style="display:none">⏺ Record</button>
+    <button class="ctrl-btn ctrl-danger" onclick="endMeeting()">Leave</button>
+  </div>
+</div>
+
+<div class="room-body">
+  <!-- JITSI -->
+  <div class="jitsi-wrap">
+    <div class="recording-notice" id="rec-notice">⏺ Recording in progress</div>
+    <div id="jitsi-container"></div>
+  </div>
+
+  <!-- SIDE PANEL -->
+  <div class="side-panel">
+    <div class="panel-tabs">
+      <div class="ptab active" onclick="switchPanel('chat',this)">Chat</div>
+      <div class="ptab" onclick="switchPanel('participants',this)">People</div>
+      <div class="ptab" onclick="switchPanel('notes',this)">Notes</div>
+      <div class="ptab" onclick="switchPanel('polls',this)">Polls</div>
+      <div class="ptab" onclick="switchPanel('actions',this)">Tasks</div>
+    </div>
+    <div class="panel-content">
+
+      <!-- CHAT -->
+      <div class="panel-view active" id="view-chat">
+        <div class="chat-messages" id="chat-messages"></div>
+        <div class="chat-input-row">
+          <input class="chat-input" id="chat-input" placeholder="Type a message..."
+            onkeydown="if(event.key==='Enter')sendChat()">
+          <button class="send-btn" onclick="sendChat()">➤</button>
+        </div>
+      </div>
+
+      <!-- PARTICIPANTS -->
+      <div class="panel-view" id="view-participants">
+        <div class="hand-queue" id="hand-queue">
+          <div class="hand-queue-title">✋ Raised Hands</div>
+          <div id="hand-queue-list"></div>
+        </div>
+        <div class="participants-list" id="participants-list"></div>
+        <div class="waiting-section" id="waiting-section" style="display:none">
+          <div class="waiting-title">⏳ Waiting Room</div>
+          <div id="waiting-list"></div>
+        </div>
+      </div>
+
+      <!-- NOTES -->
+      <div class="panel-view" id="view-notes">
+        <div class="notes-area">
+          <div style="font-size:10px;color:var(--muted);font-weight:600">SHARED MEETING NOTES</div>
+          <textarea class="notes-textarea" id="notes-area" placeholder="Shared notes — everyone can see and edit..."></textarea>
+        </div>
+        <div class="notes-footer">
+          <button class="save-btn" onclick="saveNotes()">Save Notes</button>
+        </div>
+      </div>
+
+      <!-- POLLS -->
+      <div class="panel-view" id="view-polls">
+        <div class="polls-area" id="polls-area">
+          <div style="text-align:center;color:var(--muted);padding:24px;font-size:13px">No active polls</div>
+        </div>
+        <div class="polls-footer" id="create-poll-section" style="display:none">
+          <div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:6px">CREATE POLL</div>
+          <input class="poll-input" id="poll-question" placeholder="Poll question...">
+          <input class="poll-input" id="poll-options" placeholder="Option 1, Option 2, Option 3">
+          <button class="create-poll-btn" onclick="createPoll()">🚀 Launch Poll</button>
+        </div>
+      </div>
+
+      <!-- ACTIONS -->
+      <div class="panel-view" id="view-actions">
+        <div class="actions-area" id="actions-area">
+          <div style="text-align:center;color:var(--muted);padding:24px;font-size:13px">No action items yet</div>
+        </div>
+        <div class="actions-footer" id="create-action-section" style="display:none">
+          <div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:6px">ADD ACTION ITEM</div>
+          <input class="action-inp" id="action-task" placeholder="Task description...">
+          <select class="user-select" id="action-assignee-select">
+            <option value="">— Assign to —</option>
+          </select>
+          <input class="action-inp" type="date" id="action-due">
+          <button class="create-poll-btn" onclick="createAction()">Add Task</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- FEEDBACK MODAL -->
+<div class="feedback-overlay" id="feedback-overlay">
+  <div class="feedback-card">
+    <h2>Meeting Feedback</h2>
+    <p>Help improve future meetings with a quick rating.</p>
+    <div style="font-size:13px;font-weight:600;margin-bottom:4px">Was this meeting necessary?</div>
+    <div class="yn-row">
+      <button class="yn-btn" id="yn-yes" onclick="selectYN('yes')">👍 Yes</button>
+      <button class="yn-btn" id="yn-no"  onclick="selectYN('no')">👎 No</button>
+    </div>
+    <div style="font-size:13px;font-weight:600;margin-bottom:4px">How productive was it?</div>
+    <div class="stars" id="stars-row">
+      <span class="star" onclick="selectStar(1)">⭐</span>
+      <span class="star" onclick="selectStar(2)">⭐</span>
+      <span class="star" onclick="selectStar(3)">⭐</span>
+      <span class="star" onclick="selectStar(4)">⭐</span>
+      <span class="star" onclick="selectStar(5)">⭐</span>
+    </div>
+    <div style="font-size:13px;font-weight:600;margin-bottom:4px">Suggestion (optional)</div>
+    <textarea class="fb-textarea" id="fb-improve" placeholder="What could be done better?"></textarea>
+    <button class="submit-fb" onclick="submitFeedback()">Submit &amp; Exit</button>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────────────
+const TOKEN   = "{{ session_token }}";
+const ME      = { email:"{{ session_email }}", name:"{{ user.name }}", role:"{{ session_role }}" };
+const ROOM_ID = "{{ meeting.room_id }}";
+const IS_HOST = ME.role === "manager" || ME.role === "admin"
+                || "{{ meeting.host_email }}" === ME.email;
+const HEADERS = { "Content-Type":"application/json", "X-Auth-Token": TOKEN };
+
+let jitsiApi      = null;
+let handRaised    = false;
+let isRecording   = false;
+let currentPollId = null;
+let feedbackData  = { necessary: null, productivity: 0 };
+let meetingPeople = []; // for action assign dropdown
+
+// ── SOCKET ────────────────────────────────────────────────────────────────
+const socket = io();
+socket.on("connect", () => {
+  socket.emit("register", { email: ME.email, role: ME.role });
+  socket.emit("join_meeting", {
+    room_id: ROOM_ID, user_email: ME.email,
+    name: ME.name, role: ME.role, is_host: IS_HOST
+  });
+});
+
+socket.on("user_joined",     d => { addSysMsg(d.name + " joined"); refreshParticipants(); });
+socket.on("user_left",       d => { addSysMsg(d.name + " left");   refreshParticipants(); });
+socket.on("new_meeting_chat",d => addChatMsg(d));
+socket.on("notes_updated",   d => { const ta = document.getElementById("notes-area"); if(ta.value!==d.content) ta.value=d.content; });
+socket.on("hand_raised",     d => { refreshParticipants(); if(IS_HOST) addSysMsg(d.name + " raised their hand"); });
+socket.on("hand_lowered",    () => refreshParticipants());
+socket.on("new_poll",        d => { currentPollId=d.poll._id; renderPoll(d.poll); switchPanel("polls",document.querySelectorAll(".ptab")[3]); });
+socket.on("poll_updated",    d => renderPoll(d.poll));
+socket.on("you_are_muted",   () => { if(jitsiApi) jitsiApi.executeCommand("toggleAudio"); addSysMsg("Host muted your mic"); });
+socket.on("you_are_removed", () => { addSysMsg("You were removed"); setTimeout(()=>leavePage(), 2000); });
+socket.on("recording_notice",d => { document.getElementById("rec-notice").classList.add("show"); addSysMsg(d.message); });
+socket.on("new_waiting_user",d => { if(IS_HOST){ refreshParticipants(); addSysMsg(d.name+" is waiting"); } });
+socket.on("admitted",        () => addSysMsg("You have been admitted"));
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+async function init() {
+  // show status
+  const meeting = await (await fetch("/api/meetings/"+ROOM_ID+"?token="+TOKEN)).json();
+  if (meeting.status === "active") document.getElementById("live-badge").style.display = "flex";
+
+  // host-only UI
+  if (IS_HOST) {
+    document.getElementById("record-btn").style.display = "block";
+    document.getElementById("create-poll-section").style.display = "block";
+    document.getElementById("create-action-section").style.display = "block";
+    document.getElementById("waiting-section").style.display = "block";
+  }
+
+  // load notes
+  const notes = await (await fetch("/api/notes/"+ROOM_ID+"?token="+TOKEN)).json();
+  if (notes.content) document.getElementById("notes-area").value = notes.content;
+
+  // log attendance join
+  await fetch("/api/attendance/join", { method:"POST", headers:HEADERS,
+    body: JSON.stringify({ room_id:ROOM_ID, meeting_title:meeting.title || "" }) });
+
+  // populate assignee dropdown
+  const users = await (await fetch("/api/meetings/users/list?token="+TOKEN)).json();
+  meetingPeople = Array.isArray(users) ? users : [];
+  const sel = document.getElementById("action-assignee-select");
+  meetingPeople.forEach(u => {
+    const opt = document.createElement("option");
+    opt.value = u.email;
+    opt.textContent = u.name + " (" + u.role + ")";
+    sel.appendChild(opt);
+  });
+
+  // notes auto-sync on typing
+  const ta = document.getElementById("notes-area");
+  let notesTimer;
+  ta.addEventListener("input", () => {
+    clearTimeout(notesTimer);
+    notesTimer = setTimeout(() => {
+      socket.emit("update_notes", {room_id: ROOM_ID, content: ta.value, user_name: ME.name});
+    }, 700);
+  });
+
+  startJitsi();
+  refreshParticipants();
+  loadRoomActions();
+}
+
+// ── JITSI ─────────────────────────────────────────────────────────────────
+function startJitsi() {
+  jitsiApi = new JitsiMeetExternalAPI("meet.jit.si", {
+    roomName: "xailtddlp" + ROOM_ID,
+    width: "100%", height: "100%",
+    parentNode: document.getElementById("jitsi-container"),
+    userInfo: { displayName: ME.name },
+    configOverwrite: {
+      startWithAudioMuted: false,
+      startWithVideoMuted: false,
+      disableDeepLinking: true,
+      enableWelcomePage: false,
+      prejoinPageEnabled: false,
+      requireDisplayName: false,
+      enableLobbyChat: false,
+      hiddenPremeetingButtons: ['invite'],
+      disableInviteFunctions: true,
+    },
+    interfaceConfigOverwrite: {
+      SHOW_JITSI_WATERMARK: false,
+      SHOW_BRAND_WATERMARK: false,
+      SHOW_PROMOTIONAL_CLOSE_PAGE: false,
+      TOOLBAR_BUTTONS: ["microphone","camera","desktop","fullscreen","hangup","chat","settings","videoquality"],
+    }
+  });
+  jitsiApi.addEventListener("videoConferenceLeft", () => endMeeting());
+}
+
+// ── PARTICIPANTS ──────────────────────────────────────────────────────────
+async function refreshParticipants() {
+  const meeting = await (await fetch("/api/meetings/"+ROOM_ID+"?token="+TOKEN)).json();
+  const participants = meeting.participants || [];
+  const raisedHands  = meeting.raised_hands  || [];
+  const waiting      = meeting.waiting_room   || [];
+
+  // Participants
+  const list = document.getElementById("participants-list");
+  list.innerHTML = participants.length ? participants.map(email => {
+    const hasHand = raisedHands.find(h => h.user_email === email);
+    const initials = email.slice(0,2).toUpperCase();
+    const hcBtns = IS_HOST && email !== ME.email
+      ? `<div class="host-controls">
+           <button class="hc-btn hc-mute"   onclick="muteParticipant('${email}')">Mute</button>
+           <button class="hc-btn hc-remove" onclick="removeParticipant('${email}')">Remove</button>
+         </div>` : "";
+    return `<div class="participant-row">
+      <div class="p-avatar">${initials}</div>
+      <div><div class="p-name">${email}</div><div class="p-role">member</div></div>
+      ${hasHand ? "<span style='margin-left:auto;font-size:16px'>✋</span>" : ""}
+      ${hcBtns}
+    </div>`;
+  }).join("") : `<div style="padding:14px;color:var(--muted);font-size:12px">No participants yet</div>`;
+
+  // Hand queue
+  const queue = document.getElementById("hand-queue");
+  if (raisedHands.length) {
+    queue.classList.add("show");
+    document.getElementById("hand-queue-list").innerHTML = raisedHands.map((h,i) =>
+      `<div class="hand-item">
+        <span style="color:var(--muted);font-size:10px">${i+1}.</span>
+        <span>${h.name}</span>
+        ${IS_HOST ? `<button onclick="lowerHandFor('${h.user_email}')" style="margin-left:auto;padding:2px 7px;background:var(--green);border:none;border-radius:3px;color:white;font-size:9px;cursor:pointer">Call</button>` : ""}
+      </div>`
+    ).join("");
+  } else {
+    queue.classList.remove("show");
+  }
+
+  // Waiting room (host only)
+  if (IS_HOST) {
+    document.getElementById("waiting-list").innerHTML = waiting.length
+      ? waiting.map(w =>
+          `<div class="waiting-row">
+            <span style="font-size:12px;font-weight:500">${w.name}</span>
+            <button class="admit-btn" onclick="admitUser('${w.user_email}')">Admit</button>
+          </div>`
+        ).join("")
+      : `<div style="font-size:11px;color:var(--muted)">No one waiting</div>`;
+  }
+}
+
+function muteParticipant(email) {
+  socket.emit("mute_user", { room_id:ROOM_ID, target_email: email });
+}
+function removeParticipant(email) {
+  socket.emit("remove_user", { room_id: ROOM_ID, target_email: email });
+}
+async function admitUser(email) {
+  await fetch("/api/meetings/"+ROOM_ID+"/admit", { method:"POST", headers:HEADERS,
+    body: JSON.stringify({ user_email: email }) });
+  socket.emit("admit_user", { room_id: ROOM_ID, user_email: email });
+  refreshParticipants();
+}
+function lowerHandFor(email) {
+  socket.emit("lower_hand", { room_id: ROOM_ID, user_email: email });
+}
+
+// ── RAISE HAND ────────────────────────────────────────────────────────────
+function toggleRaiseHand() {
+  handRaised = !handRaised;
+  const btn = document.getElementById("raise-hand-btn");
+  if (handRaised) {
+    socket.emit("raise_hand", { room_id:ROOM_ID, user_email:ME.email, name:ME.name });
+    btn.textContent = "✋ Lower Hand";
+    btn.style.background = "var(--yellow)";
+    btn.style.color = "#000";
+  } else {
+    socket.emit("lower_hand", { room_id:ROOM_ID, user_email:ME.email });
+    btn.textContent = "✋ Raise Hand";
+    btn.style.background = "";
+    btn.style.color = "";
+  }
+}
+
+// ── CHAT ──────────────────────────────────────────────────────────────────
+function sendChat() {
+  const input = document.getElementById("chat-input");
+  const msg   = input.value.trim();
+  if (!msg) return;
+  socket.emit("meeting_chat", { room_id:ROOM_ID, user_email:ME.email, name:ME.name, message:msg });
+  addChatMsg({ name:ME.name, message:msg, time:new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}), user_email:ME.email });
+  input.value = "";
+}
+function addChatMsg(d) {
+  const msgs = document.getElementById("chat-messages");
+  const isMe = d.user_email === ME.email;
+  msgs.innerHTML += `<div class="chat-msg" style="${isMe?"background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.2)":""}">
+    <div class="chat-msg-header">
+      <span class="chat-msg-name" style="${isMe?"color:var(--accent2)":""}">${d.name}</span>
+      <span class="chat-msg-time">${d.time}</span>
+    </div>
+    <div class="chat-msg-text">${d.message}</div>
+  </div>`;
+  msgs.scrollTop = msgs.scrollHeight;
+}
+function addSysMsg(text) {
+  const msgs = document.getElementById("chat-messages");
+  msgs.innerHTML += `<div style="text-align:center;font-size:11px;color:var(--muted);padding:3px 0">${text}</div>`;
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+// ── NOTES ─────────────────────────────────────────────────────────────────
+async function saveNotes() {
+  await fetch("/api/notes/"+ROOM_ID, { method:"POST", headers:HEADERS,
+    body: JSON.stringify({ content: document.getElementById("notes-area").value, user_name:ME.name }) });
+}
+
+// ── POLLS ─────────────────────────────────────────────────────────────────
+async function createPoll() {
+  const question = document.getElementById("poll-question").value.trim();
+  const options  = document.getElementById("poll-options").value.split(",").map(s=>s.trim()).filter(Boolean);
+  if (!question || options.length < 2) return;
+  const res  = await fetch("/api/polls", { method:"POST", headers:HEADERS,
+    body: JSON.stringify({ room_id:ROOM_ID, question, options }) });
+  const data = await res.json();
+  socket.emit("broadcast_poll", { room_id:ROOM_ID, poll: data.poll });
+  document.getElementById("poll-question").value = "";
+  document.getElementById("poll-options").value  = "";
+}
+
+function renderPoll(poll) {
+  currentPollId = poll._id;
+  const total = poll.total_votes || 0;
+  document.getElementById("polls-area").innerHTML = `<div class="poll-card">
+    <div class="poll-question">${poll.question}</div>
+    ${poll.options.map((opt,i) => {
+      const pct = total > 0 ? Math.round((opt.count/total)*100) : 0;
+      return `<div class="poll-option" onclick="votePoll(${i})">
+        <div style="display:flex;justify-content:space-between">
+          <span>${opt.text}</span>
+          <span style="font-size:10px;color:var(--muted)">${opt.count} (${pct}%)</span>
+        </div>
+        <div class="vote-bar" style="width:${pct}%"></div>
+      </div>`;
+    }).join("")}
+    <div style="font-size:10px;color:var(--muted);margin-top:6px">${total} total votes</div>
+  </div>`;
+}
+
+async function votePoll(optionIndex) {
+  if (!currentPollId) return;
+  const res = await fetch("/api/polls/"+currentPollId+"/vote", { method:"POST", headers:HEADERS,
+    body: JSON.stringify({ option_index: optionIndex }) });
+  const data = await res.json();
+  if (!data.error) {
+    const poll = await (await fetch("/api/polls/"+ROOM_ID+"/active?token="+TOKEN)).json();
+    if (poll) socket.emit("poll_vote_update", { room_id:ROOM_ID, poll });
+  }
+}
+
+// ── ACTIONS ───────────────────────────────────────────────────────────────
+async function createAction() {
+  const task  = document.getElementById("action-task").value.trim();
+  const sel   = document.getElementById("action-assignee-select");
+  const email = sel.value;
+  const name  = sel.options[sel.selectedIndex]?.text || email;
+  const due   = document.getElementById("action-due").value;
+  if (!task || !email) return;
+
+  await fetch("/api/actions", { method:"POST", headers:HEADERS,
+    body: JSON.stringify({
+      room_id: ROOM_ID,
+      meeting_title: "{{ meeting.title }}",
+      task,
+      assigned_to_email: email,
+      assigned_to_name: name,
+      due_date: due
+    }) });
+  document.getElementById("action-task").value = "";
+  sel.value = "";
+  document.getElementById("action-due").value = "";
+  loadRoomActions();
+}
+
+async function loadRoomActions() {
+  const actions = await (await fetch("/api/actions/meeting/"+ROOM_ID+"?token="+TOKEN)).json();
+  document.getElementById("actions-area").innerHTML = actions.length
+    ? actions.map(a =>
+        `<div class="action-row">
+          <div class="action-task-text">${a.task}</div>
+          <div class="action-assignee">→ ${a.assigned_to_name||a.assigned_to_email}
+            · Due: ${a.due_date ? new Date(a.due_date).toLocaleDateString() : "Open"}
+          </div>
+        </div>`
+      ).join("")
+    : `<div style="padding:14px;color:var(--muted);font-size:12px">No action items yet</div>`;
+}
+
+// ── RECORDING ─────────────────────────────────────────────────────────────
+function toggleRecording() {
+  isRecording = !isRecording;
+  const btn = document.getElementById("record-btn");
+  if (isRecording) {
+    socket.emit("recording_started", { room_id: ROOM_ID });
+    btn.textContent = "⏹ Stop";
+    btn.style.background = "var(--red)";
+  } else {
+    btn.textContent = "⏺ Record";
+    btn.style.background = "";
+    document.getElementById("rec-notice").classList.remove("show");
+  }
+}
+
+// ── PANEL SWITCH ──────────────────────────────────────────────────────────
+function switchPanel(name, el) {
+  document.querySelectorAll(".ptab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".panel-view").forEach(v => v.classList.remove("active"));
+  if (el) el.classList.add("active");
+  document.getElementById("view-" + name).classList.add("active");
+  if (name === "actions") loadRoomActions();
+  if (name === "participants") refreshParticipants();
+}
+
+// ── END MEETING ───────────────────────────────────────────────────────────
+async function endMeeting() {
+  await fetch("/api/attendance/leave", { method:"POST", headers:HEADERS,
+    body: JSON.stringify({ room_id:ROOM_ID, status:"present" }) });
+  socket.emit("leave_meeting", { room_id:ROOM_ID, user_email:ME.email, name:ME.name });
+  if (IS_HOST) await fetch("/api/meetings/"+ROOM_ID+"/end?token="+TOKEN, { method:"POST", headers:HEADERS });
+  if (jitsiApi) jitsiApi.dispose();
+  document.getElementById("feedback-overlay").classList.add("open");
+}
+
+function leavePage() { window.close(); }
+
+// ── FEEDBACK ──────────────────────────────────────────────────────────────
+function selectYN(val) {
+  feedbackData.necessary = val;
+  document.getElementById("yn-yes").className = "yn-btn" + (val==="yes"?" selected-yes":"");
+  document.getElementById("yn-no").className  = "yn-btn" + (val==="no" ?" selected-no" :"");
+}
+function selectStar(n) {
+  feedbackData.productivity = n;
+  document.querySelectorAll(".star").forEach((s,i) => s.classList.toggle("active", i < n));
+}
+async function submitFeedback() {
+  await fetch("/api/feedback", { method:"POST", headers:HEADERS,
+    body: JSON.stringify({
+      room_id: ROOM_ID,
+      was_necessary: feedbackData.necessary,
+      productivity:  feedbackData.productivity,
+      improvement:   document.getElementById("fb-improve").value
+    }) });
+  window.close();
+  // fallback if window.close is blocked
+  setTimeout(() => { window.location.href = "/meetings?token=" + TOKEN; }, 300);
+}
+
+// ── START ─────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,3544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XAI-ITD-DLP | Intern Dashboard</title>
+<!-- ROLE: intern -->
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root{--green:#00ff88;--red:#ff3366;--yellow:#ffcc00;--blue:#0088ff;--orange:#ff8800;--bg:#050508;--surface:#0d0d15;--surface2:#12121e;--border:#1a1a2e;--text:#c8d6e5;--muted:#4a5568;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);font-family:'Rajdhani',sans-serif;color:var(--text);min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,255,136,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,136,0.02) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+nav{position:sticky;top:0;z-index:100;background:rgba(5,5,8,0.95);border-bottom:1px solid var(--border);padding:0 28px;display:flex;align-items:center;justify-content:space-between;height:60px;backdrop-filter:blur(10px);}
+.nav-brand{font-family:'Share Tech Mono',monospace;font-size:14px;color:var(--green);letter-spacing:2px;}
+.nav-right{display:flex;align-items:center;gap:16px;}
+.user-chip{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 14px;font-size:13px;font-family:'Share Tech Mono',monospace;}
+.role-badge{background:rgba(0,255,136,0.1);border:1px solid rgba(0,255,136,0.3);color:var(--green);border-radius:4px;padding:4px 10px;font-size:11px;letter-spacing:2px;font-family:'Share Tech Mono',monospace;}
+.logout-btn{background:transparent;border:1px solid rgba(255,51,102,0.4);color:var(--red);padding:6px 14px;border-radius:6px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:12px;}
+#session-bar{background:rgba(255,204,0,0.06);border-bottom:1px solid rgba(255,204,0,0.15);padding:5px 28px;display:flex;align-items:center;justify-content:space-between;font-family:'Share Tech Mono',monospace;font-size:11px;position:sticky;top:60px;z-index:99;}
+.ext-btn{background:transparent;border:1px solid rgba(255,204,0,0.4);color:var(--yellow);padding:3px 12px;border-radius:4px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:10px;}
+.main{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:28px 20px;}
+.sec-title{font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:10px;}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--border);}
+.tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border);flex-wrap:wrap;}
+.tb{background:none;border:none;border-bottom:2px solid transparent;padding:10px 18px;color:var(--muted);font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s;margin-bottom:-1px;}
+.tb:hover{color:var(--text);}
+.tb.active{color:var(--green);border-bottom-color:var(--green);}
+.panel{display:none;}
+.panel.active{display:block;}
+/* sidebar nav active handled by .section-dlp */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:16px;}
+.ctx-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:20px;}
+.ctx-item label{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);display:block;margin-bottom:6px;}
+.ctx-item .val{font-size:16px;font-weight:600;color:#fff;}
+.fg{margin-bottom:14px;}
+.fg label{display:block;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);margin-bottom:6px;}
+.fg input,.fg select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:13px;outline:none;}
+.fg input:focus,.fg select:focus{border-color:rgba(0,136,255,0.5);}
+.btn{background:transparent;border:1px solid var(--green);color:var(--green);padding:9px 20px;border-radius:8px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:1px;transition:all 0.2s;}
+.btn:hover{background:rgba(0,255,136,0.1);}
+.btn-b{border-color:var(--blue);color:var(--blue);}
+.btn-b:hover{background:rgba(0,136,255,0.1);}
+.btn-r{border-color:var(--red);color:var(--red);}
+.btn-r:hover{background:rgba(255,51,102,0.1);}
+.btn-sm{padding:5px 12px;font-size:11px;}
+.msg{margin-top:10px;font-family:'Share Tech Mono',monospace;font-size:12px;padding:8px 12px;border-radius:6px;display:none;}
+.msg.ok{background:rgba(0,255,136,0.1);color:var(--green);border:1px solid rgba(0,255,136,0.3);display:block;}
+.msg.err{background:rgba(255,51,102,0.1);color:var(--red);border:1px solid rgba(255,51,102,0.3);display:block;}
+.msg.warn{background:rgba(255,204,0,0.1);color:var(--yellow);border:1px solid rgba(255,204,0,0.3);display:block;}
+table{width:100%;border-collapse:collapse;}
+th{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;padding:12px 16px;text-align:left;border-bottom:1px solid var(--border);}
+td{padding:12px 16px;border-bottom:1px solid rgba(26,26,46,0.5);font-size:14px;}
+tr:last-child td{border-bottom:none;}
+.empty{text-align:center;color:var(--muted);font-family:'Share Tech Mono',monospace;font-size:12px;padding:32px;}
+.badge{padding:3px 10px;border-radius:4px;font-size:10px;font-family:'Share Tech Mono',monospace;font-weight:bold;}
+.bg{background:rgba(0,255,136,0.1);color:var(--green);border:1px solid rgba(0,255,136,0.3);}
+.br{background:rgba(255,51,102,0.1);color:var(--red);border:1px solid rgba(255,51,102,0.3);}
+.by{background:rgba(255,204,0,0.1);color:var(--yellow);border:1px solid rgba(255,204,0,0.3);}
+.bb{background:rgba(0,136,255,0.1);color:var(--blue);border:1px solid rgba(0,136,255,0.3);}
+.file-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;}
+.fc{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;transition:border-color 0.2s;}
+.fc:hover{border-color:rgba(0,255,136,0.3);}
+.fc-name{font-size:14px;font-weight:700;color:#fff;margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.fc-meta{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:12px;}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:1000;align-items:center;justify-content:center;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;width:90%;max-width:800px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;position:relative;}
+.modal-hdr{padding:18px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.modal-ttl{font-family:'Share Tech Mono',monospace;font-size:13px;color:var(--green);letter-spacing:1px;}
+.modal-x{background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px;padding:4px 8px;}
+.modal-x:hover{color:var(--red);}
+.modal-ftr{padding:14px 24px;border-top:1px solid var(--border);display:flex;gap:10px;flex-shrink:0;}
+#watermark{position:absolute;inset:0;pointer-events:none;z-index:5;display:flex;align-items:center;justify-content:center;opacity:0.06;font-family:'Share Tech Mono',monospace;font-size:14px;color:#fff;transform:rotate(-30deg);white-space:nowrap;user-select:none;}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:99999;align-items:center;justify-content:center;}
+.pbar-wrap{margin-bottom:12px;}
+.pbar-lbl{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:6px;}
+.pbar-track{background:var(--surface2);border-radius:4px;overflow:hidden;height:6px;}
+.pbar{height:100%;width:0%;background:linear-gradient(90deg,var(--blue),var(--green));transition:width 0.4s ease;border-radius:4px;}
+
+/* ── SIDEBAR LAYOUT ─────────────────────────── */
+:root {
+  --sb:248px;
+  --tb:56px;
+}
+
+/* Topbar */
+.topbar-dlp{position:fixed;top:0;left:0;right:0;height:var(--tb);background:rgba(5,5,8,0.97);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 18px;z-index:1100;gap:10px;backdrop-filter:blur(10px);}
+.topbar-brand{display:flex;align-items:center;gap:10px;font-family:'Share Tech Mono',monospace;font-size:13px;color:var(--green);letter-spacing:2px;white-space:nowrap;flex-shrink:0;}
+.topbar-brand-ico{width:28px;height:28px;background:linear-gradient(135deg,var(--green),var(--blue));border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#000;flex-shrink:0;}
+.topbar-hburg{display:none;background:none;border:none;color:var(--muted);cursor:pointer;padding:7px;border-radius:6px;font-size:15px;}
+.topbar-mid{flex:1;display:flex;align-items:center;padding:0 14px;}
+.topbar-bc{font-size:11px;color:var(--muted);font-family:'Share Tech Mono',monospace;display:flex;align-items:center;gap:5px;}
+.topbar-bc .bc-cur{color:var(--green);}
+.topbar-right{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.topbar-ib{background:none;border:none;color:var(--muted);cursor:pointer;padding:6px 9px;border-radius:6px;font-size:13px;transition:all .15s;}
+.topbar-ib:hover{background:rgba(0,255,136,0.06);color:var(--green);}
+.topbar-uchip{display:flex;align-items:center;gap:7px;padding:3px 10px 3px 4px;background:var(--surface);border:1px solid var(--border);border-radius:100px;cursor:pointer;transition:border-color .18s;}
+.topbar-uchip:hover{border-color:rgba(0,255,136,0.4);}
+.topbar-ava{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--green),var(--blue));color:#000;font-weight:700;font-size:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'Share Tech Mono',monospace;}
+.topbar-uname{font-size:11px;font-weight:600;color:var(--text);}
+.topbar-urole{font-size:9px;color:var(--muted);}
+.topbar-timer-badge{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--yellow);letter-spacing:1px;display:flex;align-items:center;gap:5px;padding:3px 10px;border:1px solid rgba(255,204,0,0.25);border-radius:100px;background:rgba(255,204,0,0.05);}
+
+/* Sidebar */
+.sidebar-dlp{position:fixed;left:0;top:var(--tb);bottom:0;width:var(--sb);background:rgba(8,8,14,0.98);border-right:1px solid var(--border);overflow-y:auto;z-index:1000;display:flex;flex-direction:column;transition:transform .28s cubic-bezier(.4,0,.2,1);}
+.sidebar-dlp.hidden{transform:translateX(-100%);}
+.sidebar-dlp::-webkit-scrollbar{width:3px;}
+.sidebar-dlp::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.slabel-dlp{font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-family:'Share Tech Mono',monospace;padding:14px 16px 5px;}
+.nav-item-dlp{display:flex;align-items:center;gap:9px;padding:8px 12px;margin:1px 8px;border-radius:8px;color:var(--muted);font-size:12px;font-weight:500;cursor:pointer;transition:all .13s;position:relative;user-select:none;font-family:'Rajdhani',sans-serif;}
+.nav-item-dlp i{width:16px;text-align:center;font-size:12px;flex-shrink:0;}
+.nav-item-dlp:hover{background:rgba(0,255,136,0.06);color:var(--text);}
+.nav-item-dlp.active{background:rgba(0,255,136,0.1);color:var(--green);font-weight:700;}
+.nav-item-dlp.active::before{content:'';position:absolute;left:-8px;top:6px;bottom:6px;width:3px;background:var(--green);border-radius:0 3px 3px 0;}
+.nav-badge-dlp{margin-left:auto;background:var(--red);color:#fff;font-size:8px;font-weight:700;padding:1px 5px;border-radius:5px;font-family:'Share Tech Mono',monospace;}
+.sidebar-footer-dlp{margin-top:auto;padding:12px;border-top:1px solid var(--border);}
+.sfcard-dlp{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 13px;}
+.sfcard-lbl-dlp{font-size:9px;color:var(--muted);font-family:'Share Tech Mono',monospace;text-transform:uppercase;letter-spacing:.06em;}
+.sfcard-val-dlp{font-size:18px;font-weight:700;color:var(--yellow);font-family:'Share Tech Mono',monospace;margin-top:2px;}
+.sfcard-sub-dlp{font-size:10px;color:var(--muted);margin-top:2px;}
+
+/* Main content area */
+.main-dlp{margin-left:var(--sb);margin-top:var(--tb);min-height:calc(100vh - var(--tb));padding:20px;transition:margin-left .28s;}
+.main-dlp.full-dlp{margin-left:0;}
+
+/* Sections */
+.section-dlp{display:none;animation:fadeUp .25s ease;}
+.section-dlp.active{display:block;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+
+/* Extend button in sidebar footer */
+.ext-btn-sf{background:transparent;border:1px solid rgba(255,204,0,0.4);color:var(--yellow);padding:4px 12px;border-radius:5px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:10px;margin-top:7px;width:100%;letter-spacing:1px;}
+.ext-btn-sf:hover{background:rgba(255,204,0,0.08);}
+
+/* ── NOTIFICATIONS PANEL ── */
+.notif-panel{position:fixed;top:var(--tb);right:0;width:340px;max-height:calc(100vh - var(--tb));background:var(--surface);border-left:1px solid var(--border);z-index:2000;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);box-shadow:-4px 0 24px rgba(0,0,0,0.5);}
+.notif-panel.open{transform:translateX(0);}
+.notif-hdr{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.notif-title{font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--green);letter-spacing:2px;}
+.notif-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:2px 6px;}
+.notif-close:hover{color:var(--red);}
+.notif-list{flex:1;overflow-y:auto;padding:8px 0;}
+.notif-list::-webkit-scrollbar{width:3px;}
+.notif-list::-webkit-scrollbar-thumb{background:var(--border);}
+.notif-item{padding:10px 16px;border-bottom:1px solid rgba(26,26,46,0.5);cursor:pointer;transition:background .12s;display:flex;gap:10px;align-items:flex-start;}
+.notif-item:hover{background:rgba(0,136,255,0.04);}
+.notif-item.unread{background:rgba(0,255,136,0.03);}
+.notif-item.unread::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0;margin-top:6px;}
+.notif-item:not(.unread)::before{content:'';width:6px;height:6px;flex-shrink:0;}
+.notif-ico{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
+.notif-body{flex:1;min-width:0;}
+.notif-text{font-size:12px;color:var(--text);line-height:1.5;margin-bottom:3px;}
+.notif-time{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);}
+.notif-empty{text-align:center;padding:32px;color:var(--muted);font-family:'Share Tech Mono',monospace;font-size:11px;}
+.notif-badge{position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:'Share Tech Mono',monospace;}
+.notif-btn-wrap{position:relative;display:inline-block;}
+.notif-footer{padding:10px 16px;border-top:1px solid var(--border);display:flex;gap:8px;}
+
+@media(max-width:768px){
+  .topbar-hburg{display:block;}
+  .sidebar-dlp{transform:translateX(-100%);}
+  .sidebar-dlp.open{transform:translateX(0);}
+  .main-dlp{margin-left:0;padding:12px;}
+  .topbar-mid{display:none;}
+}
+/* ── END SIDEBAR LAYOUT ──────────────────────── */
+
+/* TRAVEL MAP */
+#tr-map{height:320px;width:100%;border-radius:10px;background:#0a0a14;border:1px solid var(--border);z-index:1;}
+.map-instruction{font-family:"Share Tech Mono",monospace;font-size:10px;color:var(--muted);margin-bottom:8px;letter-spacing:1px;padding:8px 12px;background:rgba(0,136,255,0.06);border:1px solid rgba(0,136,255,0.2);border-radius:6px;}
+.pin-box{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;}
+.pin-box label{font-family:"Share Tech Mono",monospace;font-size:9px;letter-spacing:2px;color:var(--muted);display:block;margin-bottom:4px;}
+.pin-box .pin-val{font-size:12px;font-family:"Share Tech Mono",monospace;color:var(--text);word-break:break-all;}
+.leaflet-popup-content-wrapper{background:#0d0d15 !important;color:#c8d6e5 !important;border:1px solid #1a1a2e !important;border-radius:8px !important;font-family:"Share Tech Mono",monospace !important;font-size:11px !important;}
+.leaflet-popup-tip{background:#0d0d15 !important;}
+.session-timer-card{background:var(--surface);border:1px solid rgba(255,204,0,0.3);border-radius:12px;padding:18px 20px;position:relative;overflow:hidden;}
+.session-timer-card::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--yellow);}
+.timer-ring{width:72px;height:72px;position:relative;margin:0 auto 8px;}
+.timer-ring svg{transform:rotate(-90deg);}
+.ring-text{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:"Share Tech Mono",monospace;font-size:14px;font-weight:700;}
+.map-suggest-item{padding:9px 14px;font-size:12px;color:var(--text);cursor:pointer;border-bottom:1px solid var(--border);font-family:Rajdhani,sans-serif;}
+.map-suggest-item:hover{background:rgba(0,136,255,0.12);color:var(--blue);}
+.extend-pending{font-family:Share Tech Mono,monospace;font-size:10px;color:var(--yellow);letter-spacing:1px;text-align:center;padding:5px 0;}
+
+/* ══════════════════════════════════════════
+   VIRTUAL FILE MANAGER STYLES
+   ══════════════════════════════════════════ */
+.fm-container{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:16px;}
+.fm-toolbar{background:var(--surface2);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.fm-toolbar-left{display:flex;align-items:center;gap:8px;flex:1;min-width:0;}
+.fm-breadcrumb{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px;overflow:hidden;}
+.fm-breadcrumb span{cursor:pointer;color:var(--blue);white-space:nowrap;}
+.fm-breadcrumb span:hover{color:var(--green);}
+.fm-breadcrumb .sep{color:var(--muted);cursor:default;}
+.fm-breadcrumb .cur{color:var(--text);cursor:default;}
+.fm-toolbar-right{display:flex;align-items:center;gap:6px;}
+.fm-view-btn{background:none;border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--muted);cursor:pointer;font-size:13px;transition:all 0.15s;}
+.fm-view-btn.active,.fm-view-btn:hover{border-color:var(--green);color:var(--green);}
+.fm-search{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:11px;outline:none;width:160px;}
+.fm-search:focus{border-color:rgba(0,136,255,0.5);}
+.fm-body{display:flex;min-height:360px;}
+.fm-sidebar{width:180px;flex-shrink:0;border-right:1px solid var(--border);padding:12px 0;background:rgba(0,0,0,0.2);}
+.fm-sidebar-item{padding:7px 16px;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.15s;}
+.fm-sidebar-item:hover{background:rgba(0,255,136,0.06);color:var(--text);}
+.fm-sidebar-item.active{background:rgba(0,255,136,0.1);color:var(--green);border-right:2px solid var(--green);}
+.fm-sidebar-item .si-icon{font-size:13px;width:16px;text-align:center;}
+.fm-main{flex:1;overflow-y:auto;padding:12px;}
+.fm-status{padding:6px 16px;border-top:1px solid var(--border);background:var(--surface2);font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);display:flex;justify-content:space-between;}
+
+/* Grid view */
+.fm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;}
+.fm-item{border:1px solid var(--border);border-radius:8px;padding:12px 8px;text-align:center;cursor:pointer;transition:all 0.15s;position:relative;user-select:none;}
+.fm-item:hover{border-color:rgba(0,136,255,0.4);background:rgba(0,136,255,0.05);}
+.fm-item.selected{border-color:var(--blue);background:rgba(0,136,255,0.12);}
+.fm-item.fm-folder{cursor:pointer;}
+.fm-item.fm-folder:hover{border-color:rgba(255,204,0,0.4);background:rgba(255,204,0,0.05);}
+.fm-item-icon{font-size:28px;margin-bottom:6px;display:block;}
+.fm-item-name{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;}
+.fm-item-size{font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--muted);margin-top:2px;}
+.fm-item-badge{position:absolute;top:4px;right:4px;font-size:7px;padding:1px 4px;border-radius:3px;}
+
+/* List view */
+.fm-list{width:100%;}
+.fm-list-row{display:flex;align-items:center;padding:7px 10px;border-radius:6px;cursor:pointer;gap:10px;transition:background 0.1s;}
+.fm-list-row:hover{background:rgba(0,136,255,0.07);}
+.fm-list-row.selected{background:rgba(0,136,255,0.14);}
+.fm-list-icon{font-size:16px;width:24px;text-align:center;flex-shrink:0;}
+.fm-list-name{flex:1;font-size:13px;font-weight:600;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.fm-list-meta{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);width:80px;text-align:right;flex-shrink:0;}
+.fm-list-date{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);width:120px;text-align:right;flex-shrink:0;}
+
+/* Context menu */
+.fm-ctx-menu{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:4px 0;z-index:9999;min-width:160px;box-shadow:0 8px 24px rgba(0,0,0,0.5);display:none;}
+.fm-ctx-item{padding:8px 16px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;}
+.fm-ctx-item:hover{background:rgba(0,136,255,0.1);color:var(--blue);}
+.fm-ctx-item.danger:hover{background:rgba(255,51,102,0.1);color:var(--red);}
+.fm-ctx-sep{height:1px;background:var(--border);margin:4px 0;}
+
+/* New folder / rename input */
+.fm-inline-input{background:var(--surface2);border:1px solid var(--blue);border-radius:4px;padding:2px 6px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:10px;outline:none;width:90px;}
+
+/* Upload drop zone */
+.fm-dropzone{border:2px dashed var(--border);border-radius:10px;padding:32px;text-align:center;transition:all 0.2s;cursor:pointer;}
+.fm-dropzone.drag-over{border-color:var(--green);background:rgba(0,255,136,0.04);}
+.fm-dropzone-icon{font-size:36px;margin-bottom:8px;}
+.fm-dropzone-txt{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:1px;}
+.fm-dropzone-sub{font-size:11px;color:var(--muted);margin-top:4px;}
+
+/* Save-to modal */
+.save-tree-item{padding:6px 12px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;border-radius:6px;transition:background 0.1s;}
+.save-tree-item:hover{background:rgba(0,136,255,0.1);}
+.save-tree-item.selected{background:rgba(0,136,255,0.18);color:var(--blue);}
+.save-tree-indent{display:inline-block;}
+
+/* Travel history */
+.tr-hist-row{display:flex;flex-direction:column;gap:6px;padding:14px 0;border-bottom:1px solid rgba(26,26,46,0.6);}
+.tr-hist-row:last-child{border-bottom:none;}
+.tr-hist-header{display:flex;justify-content:space-between;align-items:center;}
+.tr-hist-route{font-size:14px;font-weight:700;color:#fff;}
+.tr-hist-meta{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);display:flex;gap:16px;flex-wrap:wrap;}
+.tr-hist-meta span{display:flex;align-items:center;gap:4px;}
+.fm-shared-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:7px;transition:border-color 0.2s;overflow:hidden;}
+.fm-shared-card:hover{border-color:rgba(0,255,136,0.3);}
+.fm-shared-name{font-size:13px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.fm-shared-meta{font-family:"Share Tech Mono",monospace;font-size:10px;color:var(--muted);}
+.fm-shared-actions{display:flex;gap:4px;flex-wrap:wrap;margin-top:2px;}
+
+/* ── TEAMMATE THEME ADDITIONS ─────────────────── */
+:root {
+  --bg2:#0d0d17;--bg3:#0a0a12;
+  --surface3:#151525;
+  --accent:#0088ff;--accent2:#0066cc;--accent3:#3399ff;
+  --ok:#00cc77;--ok2:#009955;
+  --warn:#ffaa00;--warn2:#cc8800;
+  --err:#ff3366;--err2:#cc1144;
+  --text2:#7a8a9a;--text3:#3a4a5a;
+  --mono:'JetBrains Mono','Share Tech Mono',monospace;
+  --sans:'DM Sans','Rajdhani',sans-serif;
+  --r:6px;--r2:10px;
+  --shadow:0 4px 24px rgba(0,136,255,.15);
+}
+
+/* Teammate pill badges */
+.pill{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:100px;font-size:9px;font-weight:700;font-family:var(--mono);text-transform:uppercase;letter-spacing:.03em;}
+.pill-ok{background:rgba(0,204,119,.12);color:#00cc77;border:1px solid rgba(0,204,119,.3);}
+.pill-warn{background:rgba(255,170,0,.12);color:#ffaa00;border:1px solid rgba(255,170,0,.3);}
+.pill-err{background:rgba(255,51,102,.12);color:#ff3366;border:1px solid rgba(255,51,102,.3);}
+.pill-info{background:rgba(0,136,255,.12);color:#0088ff;border:1px solid rgba(0,136,255,.3);}
+.pill-gray{background:rgba(74,84,96,.2);color:#7a8a9a;border:1px solid rgba(74,84,96,.3);}
+.pill-purple{background:rgba(136,68,255,.12);color:#8844ff;border:1px solid rgba(136,68,255,.3);}
+
+/* Alert boxes */
+.al{padding:10px 14px;border-radius:var(--r);margin-bottom:10px;display:flex;gap:9px;align-items:flex-start;font-size:12px;border-left:3px solid;line-height:1.6;}
+.al i{flex-shrink:0;margin-top:1px;}
+.al-danger{background:rgba(255,51,102,.07);border-color:var(--red);color:#ff6688;}
+.al-warning{background:rgba(255,204,0,.07);border-color:var(--yellow);color:#ffcc44;}
+.al-info{background:rgba(0,136,255,.07);border-color:var(--blue);color:#4499ff;}
+.al-success{background:rgba(0,255,136,.07);border-color:var(--green);color:#44ffaa;}
+
+/* Teammate buttons */
+.btn-primary{background:var(--blue);color:#fff;border:1px solid var(--blue);}
+.btn-primary:hover{background:#0066cc;transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,136,255,.3);}
+.btn-ok-t{background:var(--green);color:#000;border:1px solid var(--green);}
+.btn-ok-t:hover{background:#00cc66;}
+.btn-ghost-t{background:transparent;color:var(--muted);border:1px solid var(--border);}
+.btn-ghost-t:hover{border-color:var(--blue);color:var(--blue);background:rgba(0,136,255,.06);}
+.btn-sm-t{padding:4px 10px;font-size:10px;}
+
+/* Form controls (teammate style) */
+.fl{display:block;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;font-family:var(--mono);}
+.fg-t{margin-bottom:13px;}
+.fg-t .fc-t{width:100%;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-size:12px;font-family:var(--sans);transition:border-color .18s;outline:none;}
+.fg-t .fc-t:focus{border-color:rgba(0,136,255,.5);box-shadow:0 0 0 3px rgba(0,136,255,.08);}
+.fg-t .fc-t::placeholder{color:var(--muted);}
+textarea.fc-t{resize:vertical;min-height:80px;line-height:1.6;}
+select.fc-t{cursor:pointer;}
+.fhint-t{font-size:10px;color:var(--muted);margin-top:3px;font-family:var(--mono);}
+
+/* Tags input */
+.tags-box-t{min-height:38px;padding:4px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);display:flex;flex-wrap:wrap;gap:3px;align-items:center;cursor:text;transition:border-color .18s;}
+.tags-box-t:focus-within{border-color:rgba(0,136,255,.5);}
+.tag-t{display:inline-flex;align-items:center;gap:3px;background:rgba(0,136,255,.15);color:#4499ff;padding:2px 6px 2px 8px;border-radius:100px;font-size:10px;}
+.tag-t button{background:none;border:none;color:inherit;cursor:pointer;padding:0;font-size:12px;opacity:.6;}
+.tag-t button:hover{opacity:1;color:var(--red);}
+.tags-input-t{border:none;outline:none;font-size:11px;background:transparent;color:var(--text);flex:1;min-width:140px;padding:2px 4px;font-family:var(--sans);}
+
+/* Progress bar */
+.prog-wrap-t{margin:10px 0;}
+.prog-head-t{display:flex;justify-content:space-between;margin-bottom:4px;font-size:10px;font-family:var(--mono);color:var(--muted);}
+.prog-track-t{height:5px;background:var(--border);border-radius:100px;overflow:hidden;}
+.prog-fill-t{height:100%;background:linear-gradient(90deg,var(--blue),var(--green));border-radius:100px;transition:width .35s ease;}
+
+/* Compliance card styles */
+.sec-grid-t{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px;}
+.sec-item-t{padding:11px 13px;border-radius:var(--r);border-left:3px solid;display:flex;align-items:flex-start;gap:9px;font-size:11px;}
+.sec-item-t.ok{background:rgba(0,255,136,.05);border-color:var(--green);}
+.sec-item-t.warn{background:rgba(255,204,0,.05);border-color:var(--yellow);}
+.sec-item-t.bad{background:rgba(255,51,102,.05);border-color:var(--red);}
+.sec-item-t i{font-size:14px;flex-shrink:0;margin-top:1px;}
+.sec-item-t.ok i{color:var(--green);}
+.sec-item-t.warn i{color:var(--yellow);}
+.sec-item-t.bad i{color:var(--red);}
+.sec-lbl-t{font-weight:700;font-size:11px;color:#fff;}
+.sec-desc-t{font-size:10px;color:var(--muted);margin-top:2px;line-height:1.5;}
+
+/* Stats grid */
+.sg-t{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:14px;}
+.sc-t{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:15px;}
+.sc-icon-t{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;margin-bottom:9px;}
+.sc-val-t{font-size:22px;font-weight:700;font-family:var(--mono);color:#fff;}
+.sc-lbl-t{font-size:10px;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:.04em;font-family:var(--mono);}
+
+/* Compliance data table */
+.dt-t{width:100%;border-collapse:collapse;font-size:11px;}
+.dt-t th{text-align:left;padding:8px 12px;background:var(--surface2);color:var(--muted);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border);font-family:var(--mono);}
+.dt-t td{padding:9px 12px;border-bottom:1px solid rgba(26,26,46,.5);color:var(--text);vertical-align:top;}
+.dt-t tr:hover td{background:rgba(0,136,255,.03);}
+
+/* FAQ accordion */
+.faq-t{border:1px solid var(--border);border-radius:var(--r);margin-bottom:6px;overflow:hidden;}
+.faq-q-t{padding:11px 14px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:600;background:var(--surface2);color:var(--text);transition:background .15s;gap:10px;}
+.faq-q-t:hover{background:rgba(0,136,255,.06);}
+.faq-q-t.open{background:rgba(0,136,255,.08);color:#4499ff;}
+.faq-a-t{display:none;padding:12px 14px;font-size:11px;color:var(--muted);line-height:1.7;border-top:1px solid var(--border);}
+.faq-a-t.open{display:block;}
+
+/* Audit log item */
+.ai-t{display:flex;gap:9px;padding:9px 0;border-bottom:1px solid rgba(26,26,46,.5);}
+.ai-t:last-child{border-bottom:none;}
+.ai-ico-t{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;}
+.ai-title-t{font-size:11px;font-weight:700;font-family:var(--mono);color:#fff;}
+.ai-desc-t{font-size:10px;color:var(--muted);margin-top:2px;}
+.ai-time-t{font-size:9px;color:var(--text3);margin-top:2px;font-family:var(--mono);}
+
+/* DLP issue badge */
+.dlp-issue-t{background:rgba(255,51,102,.1);border:1px solid rgba(255,51,102,.25);color:#ff6688;border-radius:var(--r);padding:3px 8px;font-size:10px;font-family:var(--mono);display:inline-block;margin:2px;}
+
+/* Ticket card */
+.ticket-card-t{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:8px;}
+
+/* Cloud folder warn */
+.folder-warn-t{display:none;margin-top:8px;}
+
+/* VFS file chip (cloud/email attach preview) */
+.vfs-chip-t{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:4px;}
+
+/* Section header */
+.ph-t{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;}
+.ph-title-t{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;color:#fff;font-family:var(--sans);}
+.ph-title-t i{color:var(--blue);}
+/* ── END TEAMMATE ADDITIONS ──────────────────── */
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ TOPBAR ═══════════════ -->
+<nav class="topbar-dlp">
+  <div class="topbar-brand">
+    <div class="topbar-brand-ico"><i class="fas fa-shield-halved"></i></div>
+    XAI-ITD-DLP
+  </div>
+  <button class="topbar-hburg" onclick="toggleSidebarDlp()"><i class="fas fa-bars"></i></button>
+  <div class="topbar-mid">
+    <div class="topbar-bc">
+      <i class="fas fa-house"></i>&nbsp;<span style="color:var(--muted);margin:0 4px;">/</span>
+      <span class="bc-cur" id="bcPage">Overview</span>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="topbar-timer-badge">
+      <i class="fas fa-clock"></i>
+      <span id="tdisp">5:00</span>
+      <button class="ext-btn" id="extend-btn-main" onclick="extendSession()" style="padding:1px 7px;font-size:9px;border-radius:4px;">EXTEND</button>
+    </div>
+    <span id="extend-bar-msg" style="font-family:Share Tech Mono,monospace;font-size:10px;color:var(--yellow);letter-spacing:1px;display:none;margin-left:6px;"></span>
+    <div class="notif-btn-wrap">
+      <button class="topbar-ib" onclick="toggleNotifPanel()" title="Notifications"><i class="fas fa-bell"></i></button>
+      <span class="notif-badge" id="notif-badge" style="display:none">0</span>
+    </div>
+    <div class="topbar-uchip" onclick="toggleNotifPanel()" style="cursor:pointer;" title="Notifications">
+      <div class="topbar-ava" id="topbar-ava">E</div>
+      <div>
+        <div class="topbar-uname" id="topbar-uname">{{ user.name if user else "Intern" }}</div>
+        <div class="topbar-urole">INTERN</div>
+      </div>
+    </div>
+    <button class="topbar-ib" onclick="location.href='/logout'" title="Sign Out" style="color:var(--red);"><i class="fas fa-right-from-bracket"></i></button>
+  </div>
+</nav>
+
+<!-- NOTIFICATIONS PANEL -->
+<div class="notif-panel" id="notif-panel">
+  <div class="notif-hdr">
+    <span class="notif-title"><i class="fas fa-bell"></i> NOTIFICATIONS</span>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button onclick="notifMarkAllRead()" style="background:none;border:1px solid var(--border);color:var(--muted);padding:3px 10px;border-radius:5px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px;">MARK ALL READ</button>
+      <button class="notif-close" onclick="toggleNotifPanel()">✕</button>
+    </div>
+  </div>
+  <div class="notif-list" id="notif-list">
+    <div class="notif-empty">Loading notifications…</div>
+  </div>
+  <div class="notif-footer">
+    <button onclick="notifLoadMore()" style="flex:1;background:none;border:1px solid var(--border);color:var(--muted);padding:6px;border-radius:6px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:10px;">LOAD MORE</button>
+    <button onclick="notifClearAll()" style="background:none;border:1px solid rgba(255,51,102,0.3);color:var(--red);padding:6px 12px;border-radius:6px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:10px;">CLEAR ALL</button>
+  </div>
+</div>
+<div id="notif-overlay" onclick="toggleNotifPanel()" style="display:none;position:fixed;inset:0;z-index:1999;background:transparent;"></div>
+
+<!-- ═══════════════ SIDEBAR ═══════════════ -->
+<aside class="sidebar-dlp" id="sidebar-dlp">
+
+  <div class="slabel-dlp">Overview</div>
+  <div class="nav-item-dlp active" onclick="showPanel('overview')" data-p="overview"><i class="fas fa-gauge-high"></i> Dashboard</div>
+
+  <div class="slabel-dlp">File Operations</div>
+  <div class="nav-item-dlp" onclick="showPanel('files')" data-p="files"><i class="fas fa-folder-open"></i> File Viewer</div>
+
+  <div class="slabel-dlp">Communication</div>
+  <div class="nav-item-dlp" onclick="showPanel('email')" data-p="email"><i class="fas fa-envelope"></i> Email Composer</div>
+
+  <div class="slabel-dlp">Logs</div>
+  <div class="nav-item-dlp" onclick="showPanel('auditlogs')" data-p="auditlogs"><i class="fas fa-scroll"></i> Audit Logs</div>
+
+  <div class="slabel-dlp">Compliance</div>
+  <div class="nav-item-dlp" onclick="showPanel('compliance')" data-p="compliance"><i class="fas fa-shield-alt"></i> Compliance Centre</div>
+
+  <div class="sidebar-footer-dlp">
+    <div class="sfcard-dlp">
+      <div class="sfcard-lbl-dlp"><i class="fas fa-clock"></i> Session Timer</div>
+      <div class="sfcard-val-dlp" id="sidebar-tdisp">5:00</div>
+      <div class="sfcard-sub-dlp" id="sidebar-extend-msg">Active</div>
+      <button class="ext-btn-sf" id="extend-btn-sidebar" onclick="extendSession()">EXTEND SESSION</button>
+    </div>
+  </div>
+</aside>
+
+<!-- SESSION EXPIRED -->
+<div id="sess-expired" class="overlay" style="flex-direction:column;">
+  <div style="text-align:center;padding:40px;background:#0d0d15;border:1px solid rgba(255,204,0,0.3);border-radius:16px;max-width:360px;">
+    <div style="font-size:48px;margin-bottom:16px;">⏱</div>
+    <div style="font-family:'Share Tech Mono',monospace;font-size:16px;color:var(--yellow);letter-spacing:2px;margin-bottom:12px;">SESSION EXPIRED</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:24px;">Timed out due to inactivity.</div>
+    <button class="btn" onclick="location.href='/logout'">LOGIN AGAIN</button>
+  </div>
+</div>
+
+<!-- SECURITY ALERT -->
+<div id="sec-overlay" class="overlay" style="flex-direction:column;">
+  <div style="background:#0d0d15;border-radius:16px;padding:36px 40px;max-width:440px;width:90%;border:2px solid rgba(255,51,102,0.5);text-align:center;">
+    <div style="font-size:44px;margin-bottom:16px;">⛔</div>
+    <div id="sec-title" style="font-family:'Share Tech Mono',monospace;font-size:15px;font-weight:700;letter-spacing:2px;margin-bottom:14px;color:var(--red);">ALERT</div>
+    <div id="sec-msg" style="font-size:13px;color:#c8d6e5;line-height:1.7;white-space:pre-line;margin-bottom:24px;"></div>
+    <button class="btn btn-r" onclick="document.getElementById('sec-overlay').style.display='none'">ACKNOWLEDGE</button>
+  </div>
+</div>
+
+<!-- FILE VIEW MODAL -->
+<div class="modal-bg" id="view-modal">
+  <div class="modal" style="max-width:860px;">
+    <div id="watermark"></div>
+    <div class="modal-hdr">
+      <span class="modal-ttl" id="view-title">FILE VIEWER</span>
+      <button class="modal-x" onclick="closeView()">✕</button>
+    </div>
+    <div id="view-body" style="flex:1;overflow-y:auto;min-height:400px;"></div>
+    <div class="modal-ftr" id="view-modal-ftr">
+      <span style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);padding:4px 10px;letter-spacing:1px;">👁 VIEW ONLY — Intern access</span>
+      <button class="btn btn-sm btn-r" onclick="closeView()" style="margin-left:auto;">CLOSE</button>
+    </div>
+    <div id="view-msg" class="msg" style="margin:0 20px 14px;"></div>
+  </div>
+</div>
+
+<!-- FORWARD MODAL -->
+<div class="modal-bg" id="fwd-modal">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-hdr">
+      <span class="modal-ttl" id="fwd-modal-title">REQUEST FORWARD</span>
+      <button class="modal-x" onclick="closeFwdModal()">✕</button>
+    </div>
+    <div style="padding:24px;">
+      <div id="fwd-mode-note" style="font-size:12px;margin-bottom:14px;"></div>
+      <div class="fg">
+        <label>Forward To</label>
+        <select id="fwd-select"><option value="">Loading...</option></select>
+      </div>
+      <div id="fwd-msg" class="msg"></div>
+    </div>
+    <div class="modal-ftr">
+      <button class="btn btn-sm" id="fwd-submit-btn" onclick="submitFwd()">SEND REQUEST</button>
+      <button class="btn btn-sm btn-r" onclick="closeFwdModal()">CANCEL</button>
+    </div>
+  </div>
+</div>
+
+<!-- SAVE TO FILE MANAGER MODAL -->
+<div class="modal-bg" id="saveto-modal">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-hdr">
+      <span class="modal-ttl">💾 SAVE TO FILE MANAGER</span>
+      <button class="modal-x" onclick="closeSaveTo()">✕</button>
+    </div>
+    <div style="padding:20px;">
+      <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:12px;letter-spacing:1px;">SELECT DESTINATION FOLDER</div>
+      <div id="saveto-tree" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px;max-height:280px;overflow-y:auto;min-height:80px;"></div>
+      <div style="margin-top:12px;display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-sm" onclick="fmNewFolderInSaveTo()" style="font-size:10px;">📁 NEW FOLDER</button>
+        <input type="text" id="saveto-new-folder-input" placeholder="Folder name..." style="display:none;background:var(--surface2);border:1px solid var(--blue);border-radius:6px;padding:5px 10px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:11px;outline:none;flex:1;">
+      </div>
+      <div id="saveto-msg" class="msg" style="margin-top:10px;"></div>
+    </div>
+    <div class="modal-ftr">
+      <button class="btn btn-sm" id="saveto-confirm-btn" onclick="confirmSaveTo()">SAVE HERE</button>
+      <button class="btn btn-sm btn-r" onclick="closeSaveTo()">CANCEL</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONTEXT MENU — intern: view only -->
+<div class="fm-ctx-menu" id="fm-ctx-menu">
+  <div class="fm-ctx-item" onclick="fmCtxOpen()">👁 Open / Preview</div>
+</div>
+
+<!-- FM picker removed — cloud upload not available for interns -->
+
+<div class="main-dlp" id="main-dlp">
+
+  <!-- OVERVIEW -->
+  <div class="section-dlp active" id="panel-overview">
+    <div class="card ctx-grid">
+      <div class="ctx-item"><label>Name</label><div class="val" id="c-name">—</div></div>
+      <div class="ctx-item"><label>Role</label><div class="val" id="c-role">—</div></div>
+      <div class="ctx-item"><label>Location</label><div class="val" id="c-loc" style="font-size:13px;">—</div></div>
+      <div class="ctx-item"><label>IP</label><div class="val" id="c-ip" style="font-size:13px;">—</div></div>
+      <div class="ctx-item"><label>Time</label><div class="val" id="c-time" style="font-size:13px;">—</div></div>
+      <div class="ctx-item"><label>Device</label><div class="val" id="c-device" style="font-size:12px;">—</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:200px repeat(4,1fr);gap:12px;margin-bottom:20px;">
+      <div class="session-timer-card" style="text-align:center;">
+        <div style="font-family:Share Tech Mono,monospace;font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:10px;">SESSION TIMER</div>
+        <div class="timer-ring">
+          <svg width="72" height="72" viewBox="0 0 72 72">
+            <circle class="ring-bg" cx="36" cy="36" r="30"/>
+            <circle class="ring-fill" id="ov-ring" cx="36" cy="36" r="30" stroke-dasharray="188.5" stroke-dashoffset="0"/>
+          </svg>
+          <div class="ring-text" id="ov-timer-txt" style="color:var(--yellow);">5:00</div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);font-family:Share Tech Mono,monospace;margin-bottom:10px;">idle timeout</div>
+        <button class="ext-btn" onclick="extendSession()" style="width:100%;border-radius:6px;padding:5px 0;font-size:10px;">EXTEND</button>
+        <div id="extend-status-msg" style="font-size:9px;font-family:Share Tech Mono,monospace;color:var(--yellow);margin-top:5px;min-height:14px;text-align:center;"></div>
+      </div>
+      <div class="card" style="padding:16px;text-align:center;">
+        <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:6px;">AGENT</div>
+        <div id="agent-st" style="font-size:13px;color:var(--muted);">OFFLINE</div>
+      </div>
+      <div class="card" style="padding:16px;text-align:center;">
+        <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:6px;">CAMERA</div>
+        <div id="st-cam" style="font-size:13px;color:var(--green);">SECURE</div>
+      </div>
+      <div class="card" style="padding:16px;text-align:center;">
+        <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:6px;">USB</div>
+        <div id="st-usb" style="font-size:13px;color:var(--green);">BLOCKED</div>
+      </div>
+      <div class="card" style="padding:16px;text-align:center;">
+        <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:6px;">SCREENSHOT</div>
+        <div style="font-size:13px;color:var(--green);">BLOCKED</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FILES (with Virtual File Manager) -->
+  <div class="section-dlp" id="panel-files">
+    <div style="background:rgba(255,51,102,0.05);border:1px solid rgba(255,51,102,0.2);border-radius:10px;padding:10px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
+      <span style="font-size:18px;">🛡</span>
+      <span style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--red);">SECURITY ACTIVE</span>
+      <span style="font-size:12px;color:var(--muted);">Camera • USB • Screenshots — blocked &amp; logged</span>
+    </div>
+    <div style="background:rgba(255,204,0,0.05);border:1px solid rgba(255,204,0,0.25);border-radius:10px;padding:10px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px;">
+      <span style="font-size:16px;">👁</span>
+      <span style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--yellow);">INTERN ACCESS</span>
+      <span style="font-size:12px;color:var(--muted);">View files only — upload, download and forward are not available for interns</span>
+    </div>
+
+    <!-- ══ VIRTUAL FILE MANAGER ══ -->
+    <div class="sec-title">My File Manager</div>
+    <div class="fm-container">
+      <!-- Toolbar — VIEW ONLY for Intern -->
+      <div class="fm-toolbar">
+        <div class="fm-toolbar-left">
+          <button class="btn btn-sm" id="fm-back-btn" onclick="fmNavBack()" style="padding:4px 10px;font-size:11px;opacity:0.5;" disabled>◀</button>
+          <div class="fm-breadcrumb" id="fm-breadcrumb">
+            <span onclick="fmNavTo('')">🏠 Home</span>
+          </div>
+        </div>
+        <div class="fm-toolbar-right">
+          <input type="text" class="fm-search" id="fm-search" placeholder="🔍 Search files..." oninput="fmSearch(this.value)">
+          <button class="fm-view-btn active" id="fm-view-grid" onclick="fmSetView('grid')" title="Grid view">⊞</button>
+          <button class="fm-view-btn" id="fm-view-list" onclick="fmSetView('list')" title="List view">☰</button>
+          <span style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);padding:4px 10px;border:1px solid var(--border);border-radius:6px;letter-spacing:1px;">👁 VIEW ONLY</span>
+        </div>
+      </div>
+      <!-- Body -->
+      <div class="fm-body">
+        <!-- Sidebar -->
+        <div class="fm-sidebar">
+          <div class="fm-sidebar-item active" id="fmsb-home" onclick="fmNavTo('');fmSetSidebar('home')">
+            <span class="si-icon">🏠</span>HOME
+          </div>
+          <div class="fm-sidebar-item" id="fmsb-docs" onclick="fmNavTo('Documents');fmSetSidebar('docs')">
+            <span class="si-icon">📄</span>DOCUMENTS
+          </div>
+          <div class="fm-sidebar-item" id="fmsb-imgs" onclick="fmNavTo('Images');fmSetSidebar('imgs')">
+            <span class="si-icon">🖼</span>IMAGES
+          </div>
+          <div class="fm-sidebar-item" id="fmsb-sheets" onclick="fmNavTo('Spreadsheets');fmSetSidebar('sheets')">
+            <span class="si-icon">📊</span>SPREADSHEETS
+          </div>
+          <div style="height:1px;background:var(--border);margin:8px 0;"></div>
+          <div class="fm-sidebar-item" id="fmsb-recent" onclick="fmShowRecent();fmSetSidebar('recent')">
+            <span class="si-icon">🕐</span>RECENT
+          </div>
+          <div class="fm-sidebar-item" id="fmsb-shared" onclick="fmNavTo('__shared__');fmSetSidebar('shared')">
+            <span class="si-icon">📥</span>SHARED WITH ME
+          </div>
+        </div>
+        <!-- Main area -->
+        <div class="fm-main" id="fm-main" ondragover="fmDragOver(event)" ondrop="fmDrop(event)" ondragleave="fmDragLeave(event)">
+          <div id="fm-grid-view" class="fm-grid"></div>
+          <div id="fm-list-view" style="display:none;"></div>
+          <div id="fm-drop-overlay" class="fm-dropzone" style="display:none;">
+            <div class="fm-dropzone-icon">📂</div>
+            <div class="fm-dropzone-txt">DROP FILES TO UPLOAD</div>
+            <div class="fm-dropzone-sub">Files will be scanned and added to current folder</div>
+          </div>
+        </div>
+      </div>
+      <!-- Scan progress (hidden until uploading) -->
+      <div id="fm-scan-bar" style="display:none;padding:10px 16px;background:var(--surface2);border-top:1px solid var(--border);">
+        <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:6px;">VIRUS SCAN</div>
+        <div class="pbar-wrap" style="margin-bottom:4px;">
+          <div class="pbar-lbl" id="fm-pb-lbl">Scanning...</div>
+          <div class="pbar-track"><div class="pbar" id="fm-pb"></div></div>
+        </div>
+        <div id="fm-scan-result" style="font-family:'Share Tech Mono',monospace;font-size:11px;margin-top:4px;"></div>
+      </div>
+      <!-- Status bar -->
+      <div class="fm-status">
+        <span id="fm-status-left">Ready</span>
+        <span id="fm-status-right">0 items</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- REQUESTS -->
+  <!-- AUDIT LOGS -->
+  <div class="section-dlp" id="panel-auditlogs">
+    <div class="sec-title" style="display:flex;align-items:center;justify-content:space-between;">
+      <span><i class="fas fa-scroll" style="color:var(--blue);margin-right:8px;"></i>Audit Logs</span>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <input id="audit-search" type="text" placeholder="Search logs…" oninput="filterAuditLogs()" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 12px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:11px;width:180px;outline:none;">
+        <select id="audit-risk-filter" onchange="filterAuditLogs()" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:11px;outline:none;">
+          <option value="">All Risk Levels</option>
+          <option value="LOW">LOW</option>
+          <option value="MEDIUM">MEDIUM</option>
+          <option value="HIGH">HIGH</option>
+        </select>
+        <button class="btn btn-sm" onclick="loadAuditLogs()" style="font-size:11px;padding:5px 14px;"><i class="fas fa-rotate-right"></i> Refresh</button>
+      </div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:150px;">Timestamp</th>
+            <th style="width:160px;">Event</th>
+            <th>Detail</th>
+            <th style="width:100px;">Source</th>
+            <th style="width:70px;">Risk</th>
+          </tr>
+        </thead>
+        <tbody id="audit-log-body">
+          <tr><td colspan="5" class="empty">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div id="audit-log-count" style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);margin-top:10px;text-align:right;letter-spacing:1px;"></div>
+  </div>
+
+  <!-- TRAVEL — not available for interns -->
+  <div class="section-dlp" id="panel-travel">
+    <div class="card" style="text-align:center;padding:48px;">
+      <div style="font-size:48px;margin-bottom:16px;">🚫</div>
+      <div style="font-family:'Share Tech Mono',monospace;font-size:14px;color:var(--red);letter-spacing:2px;margin-bottom:10px;">ACCESS RESTRICTED</div>
+      <div style="font-size:13px;color:var(--muted);">Travel requests are not available for Intern accounts.</div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       EMAIL — GMAIL-STYLE
+  ══════════════════════════════════════════ -->
+  <div class="section-dlp" id="panel-email">
+
+    <!-- Gmail-style layout: sidebar + content -->
+    <div style="display:flex;gap:0;min-height:calc(100vh - 140px);background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+
+      <!-- ── LEFT SIDEBAR ── -->
+      <div id="em-sidebar" style="width:180px;flex-shrink:0;border-right:1px solid var(--border);padding:12px 0;background:rgba(0,0,0,0.25);display:flex;flex-direction:column;gap:2px;">
+
+        <!-- Compose button -->
+        <div style="padding:8px 12px 14px;">
+          <button onclick="emOpenCompose()" style="width:100%;background:linear-gradient(135deg,rgba(0,255,136,0.15),rgba(0,136,255,0.15));border:1px solid rgba(0,255,136,0.4);color:var(--green);padding:10px 0;border-radius:20px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:1px;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .18s;">
+            <i class="fas fa-pen"></i> Compose
+          </button>
+        </div>
+
+        <!-- Nav items -->
+        <div id="emNav-inbox"   class="em-nav-item active" onclick="emSwitchView('inbox')">
+          <i class="fas fa-inbox"></i> Inbox
+          <span id="emUnreadBadge" style="display:none;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:auto;font-family:'Share Tech Mono',monospace;"></span>
+        </div>
+        <div id="emNav-starred" class="em-nav-item" onclick="emSwitchView('starred')">
+          <i class="fas fa-star"></i> Starred
+        </div>
+        <div id="emNav-sent"    class="em-nav-item" onclick="emSwitchView('sent')">
+          <i class="fas fa-paper-plane"></i> Sent
+        </div>
+
+        <div style="height:1px;background:var(--border);margin:8px 12px;"></div>
+        <div style="padding:4px 16px;font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;">DLP ACTIVE</div>
+        <div style="padding:4px 16px;font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(0,255,136,0.5);">● Monitored</div>
+      </div>
+
+      <!-- ── MAIN CONTENT ── -->
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0;">
+
+        <!-- Search bar -->
+        <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;">
+          <div style="flex:1;display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 14px;">
+            <i class="fas fa-search" style="color:var(--muted);font-size:12px;"></i>
+            <input id="em-search" type="text" placeholder="Search mail…"
+              style="background:transparent;border:none;outline:none;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;flex:1;"
+              oninput="emSearchDebounce(this.value)" onkeydown="if(event.key==='Enter')emDoSearch()">
+          </div>
+          <button onclick="emDoSearch()" class="btn btn-sm" style="font-size:11px;padding:5px 12px;">Search</button>
+          <button onclick="emRefreshView()" style="background:none;border:1px solid var(--border);color:var(--muted);padding:7px 10px;border-radius:6px;cursor:pointer;font-size:13px;transition:all .15s;" title="Refresh">
+            <i class="fas fa-rotate-right"></i>
+          </button>
+        </div>
+
+        <!-- Message list -->
+        <div id="em-list-pane" style="flex:1;overflow-y:auto;">
+          <div id="em-list" style=""></div>
+        </div>
+
+        <!-- Thread / message reader (hidden until row clicked) -->
+        <div id="em-thread-pane" style="display:none;flex:1;overflow-y:auto;flex-direction:column;">
+          <!-- Thread header -->
+          <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <button onclick="emCloseThread()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:4px 8px;border-radius:6px;" title="Back">
+              <i class="fas fa-arrow-left"></i>
+            </button>
+            <div id="em-thread-subject" style="font-size:16px;font-weight:700;color:#fff;flex:1;"></div>
+            <div id="em-thread-actions" style="display:flex;gap:6px;"></div>
+          </div>
+          <!-- Thread messages -->
+          <div id="em-thread-msgs" style="padding:12px 20px;display:flex;flex-direction:column;gap:10px;"></div>
+          <!-- Reply box -->
+          <div id="em-reply-box" style="margin:0 20px 20px;border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+            <div style="background:var(--surface2);padding:8px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <span style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);">To:</span>
+              <div class="tags-box-t" id="em-reply-toBox" style="flex:1;min-height:28px;padding:2px 6px;" onclick="document.getElementById('em-reply-toIn').focus()">
+                <input class="tags-input-t" id="em-reply-toIn" type="email" placeholder="recipients…"
+                  onkeydown="emReplyHandleTag(event)" onblur="emReplyBlurTag(event)" style="font-size:11px;">
+              </div>
+            </div>
+            <textarea id="em-reply-body" rows="4"
+              style="width:100%;background:var(--surface2);border:none;outline:none;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;padding:12px 14px;resize:vertical;line-height:1.6;"
+              placeholder="Write your reply…"></textarea>
+            <div style="background:var(--surface2);padding:8px 14px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;">
+              <button id="em-reply-sendBtn" onclick="emSendReply()" class="btn btn-sm">
+                <i class="fas fa-paper-plane"></i> Send
+              </button>
+              <button onclick="emCancelReply()" style="background:none;border:1px solid var(--border);color:var(--muted);padding:5px 12px;border-radius:6px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:11px;">
+                Discard
+              </button>
+              <div id="em-reply-msg" style="font-family:'Share Tech Mono',monospace;font-size:11px;flex:1;text-align:right;"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── COMPOSE MODAL ── -->
+    <div id="em-compose-modal" style="display:none;position:fixed;bottom:0;right:32px;width:520px;max-width:95vw;z-index:5000;box-shadow:0 8px 40px rgba(0,0,0,0.7);border-radius:12px 12px 0 0;overflow:hidden;background:var(--surface);border:1px solid var(--border);">
+      <div style="background:var(--surface2);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;cursor:move;border-bottom:1px solid var(--border);" id="em-compose-hdr">
+        <span style="font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--green);letter-spacing:1px;">✉ NEW MESSAGE</span>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <button onclick="emMinimizeCompose()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 6px;" title="Minimise">─</button>
+          <button onclick="emCloseCompose()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:2px 6px;" title="Close">✕</button>
+        </div>
+      </div>
+      <div id="em-compose-body">
+        <!-- To -->
+        <div style="padding:6px 14px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:8px;">
+          <span style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);padding-top:6px;flex-shrink:0;width:20px;">To</span>
+          <div class="tags-box-t" id="em-toBox" style="flex:1;min-height:32px;border:none;background:transparent;padding:2px 4px;" onclick="document.getElementById('em-toIn').focus()">
+            <input class="tags-input-t" id="em-toIn" type="email" placeholder="Recipients"
+              onkeydown="emHandleTag(event)" onblur="emBlurTag(event)" style="font-size:12px;">
+          </div>
+        </div>
+        <div id="em-toErr" style="font-size:10px;color:var(--red);font-family:'Share Tech Mono',monospace;padding:0 14px;min-height:14px;"></div>
+        <!-- Subject -->
+        <div style="padding:4px 14px;border-bottom:1px solid var(--border);">
+          <input id="em-sub" type="text" placeholder="Subject"
+            style="width:100%;background:transparent;border:none;outline:none;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;padding:6px 0;">
+        </div>
+        <!-- Body -->
+        <textarea id="em-body" rows="8"
+          style="width:100%;background:transparent;border:none;outline:none;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;padding:12px 14px;resize:vertical;line-height:1.7;"
+          placeholder="Compose email…"></textarea>
+        <!-- Footer -->
+        <div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;background:var(--surface2);">
+          <button id="em-sendBtn" onclick="emSend()" class="btn btn-sm">
+            <i class="fas fa-paper-plane"></i> Send
+          </button>
+          <button onclick="emClear()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:4px 6px;" title="Discard">
+            <i class="fas fa-trash-alt"></i>
+          </button>
+          <span style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;border:1px solid var(--border);padding:2px 8px;border-radius:4px;">📎 No attachments — Intern</span>
+          <div id="em-msg" style="font-family:'Share Tech Mono',monospace;font-size:11px;flex:1;text-align:right;"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- ══════════════════════════════════════════
+       CLOUD UPLOAD — not available for interns
+  ══════════════════════════════════════════ -->
+  <div class="section-dlp" id="panel-cloud">
+    <div class="card" style="text-align:center;padding:48px;">
+      <div style="font-size:48px;margin-bottom:16px;">🚫</div>
+      <div style="font-family:'Share Tech Mono',monospace;font-size:14px;color:var(--red);letter-spacing:2px;margin-bottom:10px;">ACCESS RESTRICTED</div>
+      <div style="font-size:13px;color:var(--muted);">Cloud upload is not available for Intern accounts.</div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       COMPLIANCE TAB  (Security + Logs + GDPR + Disputes)
+  ══════════════════════════════════════════ -->
+  <div class="section-dlp" id="panel-compliance">
+    <div class="ph-t">
+      <div class="ph-title-t"><i class="fas fa-shield-alt"></i> Compliance Centre</div>
+      <button class="btn btn-ghost-t btn-sm-t" onclick="compRunSecCheck()"><i class="fas fa-rotate"></i> Refresh</button>
+    </div>
+
+    <!-- Stats row -->
+    <div class="sg-t">
+      <div class="sc-t"><div class="sc-icon-t" style="background:rgba(0,255,136,.12);color:var(--green);"><i class="fas fa-shield-check"></i></div><div class="sc-val-t" id="comp-overallVal" style="color:var(--green);">--</div><div class="sc-lbl-t">Overall Status</div></div>
+      <div class="sc-t"><div class="sc-icon-t" style="background:rgba(255,51,102,.12);color:var(--red);"><i class="fas fa-triangle-exclamation"></i></div><div class="sc-val-t" id="comp-viols">0</div><div class="sc-lbl-t">Violations (Session)</div></div>
+      <div class="sc-t"><div class="sc-icon-t" style="background:rgba(0,136,255,.12);color:var(--blue);"><i class="fas fa-bell"></i></div><div class="sc-val-t" id="comp-alerts">0</div><div class="sc-lbl-t">Alerts Logged</div></div>
+      <div class="sc-t">
+        <div class="sc-icon-t" style="background:rgba(255,204,0,.12);color:var(--yellow);"><i class="fas fa-clock"></i></div>
+        <div style="font-size:16px;font-weight:700;font-family:var(--mono);color:#fff;" id="comp-score">--</div>
+        <div class="sc-lbl-t">Compliance Score</div>
+      </div>
+    </div>
+
+    <!-- Active Controls -->
+    <div class="card" style="margin-bottom:13px;">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:12px;letter-spacing:1px;display:flex;align-items:center;justify-content:space-between;"><span><i class="fas fa-gears" style="color:var(--blue);"></i> ACTIVE SECURITY CONTROLS</span></div>
+      <div class="sec-grid-t" id="comp-secGrid"></div>
+    </div>
+
+    <!-- System Health -->
+    <div class="card" style="margin-bottom:13px;">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:12px;letter-spacing:1px;"><i class="fas fa-clipboard-check" style="color:var(--blue);"></i> SYSTEM HEALTH — LIVE</div>
+      <div class="sec-grid-t" id="comp-healthGrid"></div>
+    </div>
+
+    <!-- Audit Log -->
+    <div class="card" style="margin-bottom:13px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:6px;">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:1px;"><i class="fas fa-timeline" style="color:var(--blue);"></i> AUDIT LOG — <span id="comp-logCount">0 entries</span></div>
+        <div style="display:flex;gap:5px;">
+          <button class="btn btn-ghost-t btn-sm-t" onclick="compExportLogs()"><i class="fas fa-download"></i> Export CSV</button>
+          <button class="btn btn-ghost-t btn-sm-t" onclick="compRenderLogs()"><i class="fas fa-rotate"></i> Refresh</button>
+        </div>
+      </div>
+      <div class="al al-info"><i class="fas fa-circle-info"></i><div><strong>Integrity Notice:</strong> Logs are fetched live from the server-side audit database. Retention: 90 days.</div></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:11px;">
+        <input style="flex:1;min-width:140px;padding:6px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);font-size:11px;color:var(--text);outline:none;" id="comp-lSearch" placeholder="Search logs…" oninput="compDebounceRenderLogs()">
+        <select class="fc-t" style="width:auto;" id="comp-lType" onchange="compRenderLogs()">
+          <option value="">All Types</option><option>FILE</option><option>EMAIL</option><option>CLOUD</option><option>TRANSFER</option><option>USB</option><option>SECURITY</option><option>AUTH</option><option>SESSION</option>
+        </select>
+        <select class="fc-t" style="width:auto;" id="comp-lSev" onchange="compRenderLogs()">
+          <option value="">All Severity</option><option>LOW</option><option>MEDIUM</option><option>HIGH</option><option>CRITICAL</option>
+        </select>
+      </div>
+      <div id="comp-logsContainer"></div>
+      <div id="comp-logsPag" style="display:flex;justify-content:center;gap:4px;margin-top:10px;flex-wrap:wrap;"></div>
+    </div>
+
+    <!-- GDPR & Rights -->
+    <div class="card" style="margin-bottom:13px;">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:12px;letter-spacing:1px;"><i class="fas fa-scale-balanced" style="color:var(--blue);"></i> GDPR &amp; YOUR RIGHTS</div>
+      <div class="al al-info"><i class="fas fa-circle-info"></i><div>This fulfils our GDPR Article 13 transparency obligation. By using this system you have been informed of all data processing. Your rights are exercisable at any time.</div></div>
+      <div class="card" style="margin-bottom:11px;background:var(--surface2);">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:10px;letter-spacing:1px;"><i class="fas fa-database" style="color:var(--blue);"></i> WHAT WE COLLECT &amp; WHY</div>
+        <div style="overflow-x:auto;">
+          <table class="dt-t">
+            <thead><tr><th>Data Type</th><th>Purpose</th><th>Retention</th><th>Legal Basis</th></tr></thead>
+            <tbody>
+              <tr><td>Login timestamps, session IDs</td><td>Authentication &amp; security</td><td>90 days</td><td>Legitimate interest</td></tr>
+              <tr><td>File access records (path, duration)</td><td>DLP &amp; compliance</td><td>90 days</td><td>Contractual obligation</td></tr>
+              <tr><td>Email metadata (to/from/CC/BCC/subject)</td><td>DLP compliance</td><td>90 days</td><td>Legitimate interest</td></tr>
+              <tr><td>Email body (scanned, not stored if clean)</td><td>PII/keyword detection</td><td>Not stored if clean; 30 days if flagged</td><td>Legitimate interest</td></tr>
+              <tr><td>Upload/transfer records with SHA-256 hash</td><td>Exfiltration prevention</td><td>90 days</td><td>Contractual obligation</td></tr>
+              <tr><td>Webcam frames (real-time only)</td><td>Phone detection during file viewing</td><td><strong style="color:var(--green);">Not stored — processed then discarded</strong></td><td>Explicit consent (browser prompt)</td></tr>
+              <tr><td>USB access tickets</td><td>Hardware control audit trail</td><td>90 days</td><td>Legitimate interest</td></tr>
+              <tr><td>Compliance score, violation count</td><td>Manager reporting</td><td>90 days</td><td>Legitimate interest</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card" style="background:var(--surface2);">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:10px;letter-spacing:1px;"><i class="fas fa-user-shield" style="color:var(--blue);"></i> EXERCISE YOUR RIGHTS</div>
+        <div class="faq-t"><div class="faq-q-t" onclick="gdprFaq(this)">Article 15 — Right of Access <i class="fas fa-chevron-down" style="flex-shrink:0;"></i></div><div class="faq-a-t">View session logs immediately in the Audit Log section above. For the full server-side record, submit a Subject Access Request. We must respond within 30 days.</div></div>
+        <div class="faq-t"><div class="faq-q-t" onclick="gdprFaq(this)">Article 17 — Right to Erasure <i class="fas fa-chevron-down" style="flex-shrink:0;"></i></div><div class="faq-a-t">You may request deletion. Note: erasure may be restricted where data is required for legal compliance or an ongoing investigation.</div></div>
+        <div class="faq-t"><div class="faq-q-t" onclick="gdprFaq(this)">Article 21 — Right to Object <i class="fas fa-chevron-down" style="flex-shrink:0;"></i></div><div class="faq-a-t">You may object to processing based on legitimate interests. Webcam objection is honoured immediately — deny camera access in the browser.</div></div>
+        <div class="faq-t"><div class="faq-q-t" onclick="gdprFaq(this)">What happens to my data when employment ends? <i class="fas fa-chevron-down" style="flex-shrink:0;"></i></div><div class="faq-a-t">Account deactivated on last day. Audit logs retained 90 days post-departure for legal/handover purposes, then securely deleted.</div></div>
+        <div style="margin-top:12px;">
+          <div class="fg-t"><label class="fl">Submit a GDPR Request</label><select class="fc-t" id="comp-gdprType"><option value="access">Article 15 — Right of Access</option><option value="erasure">Article 17 — Right to Erasure</option><option value="rectification">Article 16 — Right to Rectification</option><option value="portability">Article 20 — Data Portability</option><option value="objection">Article 21 — Right to Object</option></select></div>
+          <div class="fg-t"><label class="fl">Details</label><textarea class="fc-t" id="comp-gdprDetails" rows="3" placeholder="Describe your request in detail…"></textarea></div>
+          <button class="btn btn-primary btn-sm-t" onclick="compSubmitGdpr()"><i class="fas fa-file-circle-check"></i> Submit GDPR Request</button>
+          <div id="comp-gdprMsg" class="msg" style="margin-top:8px;"></div>
+        </div>
+        <div id="comp-gdprList" style="margin-top:14px;"></div>
+      </div>
+    </div>
+
+    <!-- Dispute Centre -->
+    <div class="card">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:12px;letter-spacing:1px;"><i class="fas fa-flag" style="color:var(--yellow);"></i> DISPUTE CENTRE <span class="pill pill-warn" style="margin-left:6px;">Human Review · 5 Business Days</span></div>
+      <div class="al al-info"><i class="fas fa-circle-info"></i><div>Contest incorrect violations, appeal denied requests, or challenge false AI detections. All disputes reviewed by a human IT Security officer. Written response within 5 business days.</div></div>
+      <div class="fg-t"><label class="fl">Dispute Type</label>
+        <select class="fc-t" id="comp-dispType">
+          <option value="">Select type…</option>
+          <option value="false_violation">Incorrect Violation on My Record</option>
+          <option value="false_ai">False AI Detection (phone/face misidentified)</option>
+          <option value="denied_request">Appeal Denied USB / Upload Request</option>
+          <option value="access_blocked">Incorrect Access Block</option>
+          <option value="dlp_fp">DLP False Positive (legitimate content blocked)</option>
+          <option value="wrong_file">Accidental File Access — Self Reporting</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="fg-t"><label class="fl">Log Reference UUID <small style="text-transform:none;letter-spacing:0;font-weight:400;">(copy from Audit Log)</small></label><input class="fc-t" id="comp-dispRef" placeholder="e.g. a1b2c3d4-…"></div>
+      <div class="fg-t"><label class="fl">Description</label><textarea class="fc-t" id="comp-dispDesc" rows="4" placeholder="What happened, why it is incorrect, and supporting context…"></textarea></div>
+      <button class="btn btn-primary btn-sm-t" onclick="compSubmitDispute()"><i class="fas fa-flag"></i> Submit Dispute</button>
+      <div id="comp-dispMsg" class="msg" style="margin-top:8px;"></div>
+      <div id="comp-disputeList" style="margin-top:14px;"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+var SESSION_EMAIL = "{{ session_email }}";
+var SESSION_ROLE  = "intern";
+var SESSION_TOKEN = "{{ session_token }}";
+
+function apiFetch(url, opts) {
+  opts = opts || {};
+  opts.headers = opts.headers || {};
+  opts.headers["X-Auth-Token"] = SESSION_TOKEN;
+  return fetch(url, opts);
+}
+
+// SOCKET
+var socket = io();
+socket.on("connect", function() { socket.emit("register", {email:SESSION_EMAIL, role:SESSION_ROLE}); });
+socket.on("reconnect", function() { socket.emit("register", {email:SESSION_EMAIL, role:SESSION_ROLE}); });
+
+socket.on("new_event", function(d) {
+  if (d.email && d.email !== SESSION_EMAIL && d.user && d.user !== SESSION_EMAIL) return;
+  if (d.type === "CAMERA_BLOCKED") {
+    if (document.getElementById("view-modal").style.display !== "none") closeView();
+    secAlert("CAMERA BLOCKED", "Camera app blocked.\nDocument viewer closed.\nIncident logged.", "red");
+  }
+  if (d.type === "USB_INSERTED") {
+    secAlert("USB BLOCKED", "USB device detected and ejected.\nProhibited by company policy.\nReported to manager.", "orange");
+    var el = document.getElementById("st-usb");
+    el.textContent = "DETECTED"; el.style.color = "var(--red)";
+    setTimeout(function(){el.textContent="BLOCKED";el.style.color="var(--green)";},5000);
+  }
+  if (d.type === "HEARTBEAT" || d.type === "AGENT_STARTED") {
+    var a = document.getElementById("agent-st");
+    a.textContent = "ACTIVE"; a.style.color = "var(--green)";
+  }
+  var ap = document.querySelector(".panel.active");
+  if (ap && ap.id === "panel-overview") loadOvLog();
+});
+socket.on("file_uploaded", function() {
+  var ap = document.querySelector(".panel.active");
+  if (ap && ap.id === "panel-files") { loadFiles(); fmRender(); }
+});
+socket.on("approval_resolved", function(d) {
+  if (d._target_email && d._target_email !== SESSION_EMAIL) return;
+  loadFiles();
+  secAlert((d.status==="approved"?"✅ APPROVED":"❌ REJECTED"),
+    "Your " + (d.request_type||"access") + " request for \"" + (d.file_name||"file") + "\" has been " + (d.status||"updated") + "." +
+    (d.status==="approved"?" You can now use the button in the Files tab.":"") +
+    (d.reason?" Reason: "+d.reason:""),
+    d.status==="approved"?"green":"red");
+});
+socket.on("travel_mode_resolved", function(d) {
+  loadTravelStatus();
+  loadTravelHistory();
+  secAlert("TRAVEL MODE " + (d.status||"").toUpperCase(), d.message||"", d.status==="approved"?"green":"red");
+});
+
+// ═══════════════════════════════════════════
+// SESSION TIMER — pure 5-min countdown from login
+// Does NOT reset on mouse/keyboard activity.
+// Only EXTEND (approved by manager) resets it to a fresh 5 minutes.
+// Tab-switch: time away is added back so countdown pauses while tab is hidden.
+// ═══════════════════════════════════════════
+var TSECS = 300;
+var stimer = null;
+var _tabHiddenAt = null;
+
+var timerStart;
+try {
+  var _ts = sessionStorage.getItem("dlp_timer_start");
+  if (_ts) {
+    var _stored = parseInt(_ts, 10);
+    var _elapsedSec = (Date.now() - _stored) / 1000;
+    timerStart = (_elapsedSec >= 0 && _elapsedSec < TSECS) ? _stored : Date.now();
+  } else {
+    timerStart = Date.now();
+  }
+  sessionStorage.setItem("dlp_timer_start", String(timerStart));
+} catch(e) { timerStart = Date.now(); }
+
+document.addEventListener("visibilitychange", function(){
+  if (document.hidden) {
+    _tabHiddenAt = Date.now();
+    try { sessionStorage.setItem("dlp_timer_start", String(timerStart)); } catch(e){}
+  } else {
+    if (_tabHiddenAt !== null) {
+      var away = Date.now() - _tabHiddenAt;
+      timerStart += away;
+      _tabHiddenAt = null;
+    }
+    try { sessionStorage.setItem("dlp_timer_start", String(timerStart)); } catch(e){}
+  }
+});
+
+window.addEventListener("beforeunload", function(){
+  try { sessionStorage.setItem("dlp_timer_start", String(timerStart)); } catch(e){}
+});
+
+function updTdisp(s){
+  var el=document.getElementById("tdisp");
+  var m=Math.floor(s/60),sec=s%60;
+  var txt=m+":"+(sec<10?"0":"")+sec;
+  if(el){el.textContent=txt;el.style.color=s<=30?"var(--red)":"var(--yellow)";}
+  // Also update sidebar timer
+  var sel=document.getElementById("sidebar-tdisp");
+  if(sel){sel.textContent=txt;sel.style.color=s<=30?"var(--red)":"var(--yellow)";}
+  var rtxt=document.getElementById("ov-timer-txt");
+  var ring=document.getElementById("ov-ring");
+  if(rtxt){rtxt.textContent=txt;rtxt.style.color=s<=30?"var(--red)":"var(--yellow)";}
+  if(ring){
+    var CIRC=188.5;
+    var pct=s/TSECS;
+    ring.style.strokeDashoffset=CIRC*(1-pct);
+    ring.style.stroke=s<=30?"var(--red)":s<=60?"var(--orange)":"var(--yellow)";
+  }
+}
+function startTimer(){
+  if(stimer) clearInterval(stimer);
+  stimer=setInterval(function(){
+    var elapsed=Math.floor((Date.now()-timerStart)/1000);
+    var rem=Math.max(0,TSECS-elapsed);
+    updTdisp(rem);
+    if(rem===0){
+      clearInterval(stimer);stimer=null;
+      apiFetch("/logout").catch(function(){});
+      document.getElementById("sess-expired").style.display="flex";
+    }
+  },1000);
+}
+
+var _extendPending = false;
+function _setExtendUI(pending, msg, color) {
+  document.querySelectorAll(".ext-btn, .ext-btn-sf").forEach(function(b){
+    b.textContent  = pending ? "PENDING…" : (b.classList.contains("ext-btn-sf") ? "EXTEND SESSION" : "EXTEND");
+    b.style.opacity = pending ? "0.5" : "1";
+    b.disabled      = pending;
+  });
+  var sidebarMsg = document.getElementById("sidebar-extend-msg");
+  if(sidebarMsg){ sidebarMsg.textContent = msg || "Active"; sidebarMsg.style.color = msg ? color : "var(--muted)"; }
+  var barMsg  = document.getElementById("extend-bar-msg");
+  var cardMsg = document.getElementById("extend-status-msg");
+  if (barMsg)  { barMsg.textContent  = msg; barMsg.style.color  = color; barMsg.style.display  = msg ? "inline" : "none"; }
+  if (cardMsg) { cardMsg.textContent = msg; cardMsg.style.color = color; }
+}
+async function extendSession(){
+  if(_extendPending){ _setExtendUI(true, "Awaiting admin approval…", "var(--yellow)"); return; }
+  _extendPending = true;
+  _setExtendUI(true, "Request sent — awaiting admin approval…", "var(--yellow)");
+  try {
+    var res = await apiFetch("/api/employee/request-extend", {method:"POST"});
+    if (!res.ok) throw new Error("failed");
+  } catch(e) {
+    _extendPending = false;
+    _setExtendUI(false, "Failed to send request. Try again.", "var(--red)");
+    setTimeout(function(){ _setExtendUI(false,"",""); }, 4000);
+  }
+}
+socket.on("session_extended", function(d) {
+  if(d._target_email && d._target_email !== SESSION_EMAIL) return;
+  _extendPending = false;
+  if(d.status === "approved"){
+    timerStart = Date.now();
+    try { sessionStorage.setItem("dlp_timer_start", String(timerStart)); } catch(e){}
+    updTdisp(TSECS);
+    _setExtendUI(false, "Extended ✓", "var(--green)");
+    secAlert("SESSION EXTENDED", "Your admin approved the session extension.", "green");
+    try{apiFetch("/api/auth/heartbeat",{method:"POST"});}catch(e){}
+  } else {
+    _setExtendUI(false, "Extension declined by admin.", "var(--red)");
+    secAlert("EXTENSION DECLINED", "Your admin declined the session extension request.", "red");
+  }
+  setTimeout(function(){ _setExtendUI(false,"",""); }, 5000);
+});
+
+function secAlert(title, msg, color){
+  var cols={red:"var(--red)",orange:"var(--orange)",green:"var(--green)",yellow:"var(--yellow)"};
+  document.getElementById("sec-title").textContent=title;
+  document.getElementById("sec-title").style.color=cols[color]||"var(--red)";
+  document.getElementById("sec-msg").textContent=msg;
+  document.getElementById("sec-overlay").style.display="flex";
+  setTimeout(function(){document.getElementById("sec-overlay").style.display="none";},10000);
+}
+
+// TABS
+function switchTab(name,btn){
+  // Legacy compatibility — redirect to showPanel
+  showPanel(name);
+}
+
+function showPanel(name){
+  // Intern: block cloud and travel panels
+  if(name==="cloud" || name==="travel"){ return; }
+
+  // Switch sections
+  document.querySelectorAll(".section-dlp").forEach(function(p){p.classList.remove("active");});
+  var el = document.getElementById("panel-"+name);
+  if(el) el.classList.add("active");
+
+  // Update sidebar nav active state
+  document.querySelectorAll(".nav-item-dlp").forEach(function(n){
+    n.classList.toggle("active", n.getAttribute("data-p")===name);
+  });
+
+  // Update breadcrumb
+  var labels = {
+    overview:"Dashboard", files:"File Viewer", auditlogs:"Audit Logs",
+    email:"Email Composer", compliance:"Compliance Centre"
+  };
+  var bc = document.getElementById("bcPage");
+  if(bc) bc.textContent = labels[name] || name;
+
+  // Close sidebar on mobile
+  if(window.innerWidth <= 768){
+    document.getElementById("sidebar-dlp").classList.remove("open");
+  }
+
+  // Section-specific init
+  if(name==="overview")    loadOvLog();
+  if(name==="files")       { loadFiles(); fmRender(); }
+  if(name==="auditlogs")   loadAuditLogs();
+  if(name==="compliance")  { compRunSecCheck(); compRenderLogs(); }
+  if(name==="email")       { emLoadMailUsers(); if(!emState.currentThread){ emLoadView(); } }
+}
+
+function toggleSidebarDlp(){
+  document.getElementById("sidebar-dlp").classList.toggle("open");
+}
+
+// CONTEXT
+async function loadCtx(){
+  try{
+    var d=await(await apiFetch("/api/employee/context")).json();
+    document.getElementById("c-name").textContent=d.name||"—";
+    document.getElementById("c-role").textContent=(d.role||"—").toUpperCase();
+    // Update topbar user display
+    var tbName=document.getElementById("topbar-uname");
+    var tbAva=document.getElementById("topbar-ava");
+    if(tbName) tbName.textContent=d.name||"Employee";
+    if(tbAva)  tbAva.textContent=(d.name||"E")[0].toUpperCase();
+    document.getElementById("c-time").textContent=new Date().toLocaleTimeString();
+    if(d.location){
+      document.getElementById("c-loc").textContent=(d.location.city||"")+(d.location.country?", "+d.location.country:"");
+      document.getElementById("c-ip").textContent=d.location.ip||"—";
+    }
+    var fp=getFingerprint();
+    document.getElementById("c-device").textContent=fp.os+" / "+fp.browser.split("/")[0];
+  }catch(e){console.error("ctx",e);}
+}
+
+async function loadOvLog(){
+  // Overview no longer shows activity table — handled by Audit Logs panel
+}
+
+// ── AUDIT LOGS ──────────────────────────────────────────────────
+var _auditAllLogs = [];
+
+async function loadAuditLogs(){
+  var tb = document.getElementById("audit-log-body");
+  var ct = document.getElementById("audit-log-count");
+  if(tb) tb.innerHTML = "<tr><td colspan='5' class='empty'>Loading…</td></tr>";
+  try{
+    var logs = await(await apiFetch("/api/employee/my-logs")).json();
+    _auditAllLogs = logs || [];
+    renderAuditLogs(_auditAllLogs);
+  }catch(e){
+    if(tb) tb.innerHTML = "<tr><td colspan='5' class='empty' style='color:var(--red)'>Failed to load logs.</td></tr>";
+  }
+}
+
+function filterAuditLogs(){
+  var q    = (document.getElementById("audit-search").value||"").toLowerCase();
+  var risk = document.getElementById("audit-risk-filter").value;
+  var filtered = _auditAllLogs.filter(function(l){
+    var matchRisk = !risk || (l.risk_level||"LOW") === risk;
+    var matchQ    = !q ||
+      (l.event_type||"").toLowerCase().includes(q) ||
+      (l.detail||"").toLowerCase().includes(q) ||
+      (l.source||"").toLowerCase().includes(q) ||
+      (l.timestamp||"").toLowerCase().includes(q);
+    return matchRisk && matchQ;
+  });
+  renderAuditLogs(filtered);
+}
+
+function renderAuditLogs(logs){
+  var tb = document.getElementById("audit-log-body");
+  var ct = document.getElementById("audit-log-count");
+  if(!logs || !logs.length){
+    if(tb) tb.innerHTML = "<tr><td colspan='5' class='empty'>No logs found.</td></tr>";
+    if(ct) ct.textContent = "";
+    return;
+  }
+  if(tb) tb.innerHTML = logs.map(function(l){
+    var risk  = l.risk_level || "LOW";
+    var rCol  = risk==="HIGH" ? "var(--red)" : risk==="MEDIUM" ? "var(--orange)" : "var(--green)";
+    var rBadge= "<span style='font-family:Share Tech Mono,monospace;font-size:10px;color:"+rCol+";border:1px solid "+rCol+";border-radius:4px;padding:1px 6px;letter-spacing:1px;'>"+risk+"</span>";
+    return "<tr>"+
+      "<td style='font-family:Share Tech Mono,monospace;font-size:11px;color:var(--muted);white-space:nowrap;'>"+(l.timestamp||"—")+"</td>"+
+      "<td style='font-family:Share Tech Mono,monospace;font-size:11px;color:#fff;white-space:nowrap;'>"+(l.event_type||"—")+"</td>"+
+      "<td style='font-size:12px;color:var(--text);'>"+(l.detail||"—")+"</td>"+
+      "<td style='font-family:Share Tech Mono,monospace;font-size:10px;color:var(--muted);'>"+(l.source||"—")+"</td>"+
+      "<td>"+rBadge+"</td>"+
+      "</tr>";
+  }).join("");
+  if(ct) ct.textContent = logs.length + " log" + (logs.length!==1?"s":"") + " found";
+}
+
+// ═══════════════════════════════════════════════════════════════
+// VIRTUAL FILE MANAGER
+// All files stored in fmFS (in-memory tree). Persisted via
+// sessionStorage so refresh keeps the structure within a session.
+// ═══════════════════════════════════════════════════════════════
+var fmFS = null;        // root node of virtual filesystem
+var fmCwd = "";         // current path, "" = root
+var fmHistory = [];     // navigation history for back button
+var fmView = "grid";    // "grid" | "list"
+var fmSelected = null;  // currently selected item name
+var fmCtxTarget = null; // item right-clicked
+var fmRecentFiles = []; // [{name, path, mime, size, date, fid}]
+
+// ── FS helpers ──────────────────────────────────────────────────
+function fmInitFS() {
+  var stored = null;
+  try { stored = localStorage.getItem("dlp_fm_fs"); } catch(e){}
+  if (stored) {
+    try { fmFS = JSON.parse(stored); return; } catch(e){}
+  }
+  // Bootstrap default folder structure
+  fmFS = {
+    type: "folder", name: "Home", children: {
+      "Documents":    { type:"folder", name:"Documents",    children:{} },
+      "Images":       { type:"folder", name:"Images",       children:{} },
+      "Spreadsheets": { type:"folder", name:"Spreadsheets", children:{} },
+    }
+  };
+  fmSaveFS();
+}
+
+function fmSaveFS() {
+  try { localStorage.setItem("dlp_fm_fs", JSON.stringify(fmFS)); } catch(e){}
+}
+
+function fmGetNode(path) {
+  if (!path) return fmFS;
+  var parts = path.split("/").filter(Boolean);
+  var node = fmFS;
+  for (var i = 0; i < parts.length; i++) {
+    if (!node.children || !node.children[parts[i]]) return null;
+    node = node.children[parts[i]];
+  }
+  return node;
+}
+
+function fmJoinPath(base, name) {
+  return base ? base + "/" + name : name;
+}
+
+// ── Navigation ─────────────────────────────────────────────────
+function fmNavTo(path) {
+  if (fmCwd !== path) fmHistory.push(fmCwd);
+  fmCwd = path;
+  fmSelected = null;
+  fmRender();
+  // Update sidebar active state
+  if (!path) fmSetSidebar("home");
+}
+
+function fmNavBack() {
+  if (!fmHistory.length) return;
+  fmCwd = fmHistory.pop();
+  fmSelected = null;
+  fmRender();
+}
+
+function fmSetSidebar(id) {
+  document.querySelectorAll(".fm-sidebar-item").forEach(function(el){ el.classList.remove("active"); });
+  var el = document.getElementById("fmsb-" + id);
+  if (el) el.classList.add("active");
+}
+
+// ── Render ─────────────────────────────────────────────────────
+function fmRender(filterText) {
+  var node = fmGetNode(fmCwd);
+  var gridEl = document.getElementById("fm-grid-view");
+  var listEl = document.getElementById("fm-list-view");
+
+  // Breadcrumb
+  var bc = document.getElementById("fm-breadcrumb");
+  var parts = fmCwd ? fmCwd.split("/").filter(Boolean) : [];
+  var bcHtml = "<span onclick=\"fmNavTo('')\">🏠 Home</span>";
+  var built = "";
+  parts.forEach(function(p, i) {
+    built = built ? built + "/" + p : p;
+    var cap = built; // capture for onclick
+    bcHtml += "<span class='sep'>/</span>";
+    if (i === parts.length - 1) {
+      bcHtml += "<span class='cur'>" + escHtml(p) + "</span>";
+    } else {
+      bcHtml += "<span onclick=\"fmNavTo('" + cap + "')\">" + escHtml(p) + "</span>";
+    }
+  });
+  bc.innerHTML = bcHtml;
+
+  // Back button
+  var backBtn = document.getElementById("fm-back-btn");
+  backBtn.disabled = fmHistory.length === 0;
+  backBtn.style.opacity = fmHistory.length === 0 ? "0.3" : "1";
+
+  // Virtual folder: Shared With Me
+  if (fmCwd === "__shared__") {
+    var _bc = document.getElementById("fm-breadcrumb");
+    if (_bc) _bc.innerHTML =
+      "<span onclick=\"fmNavTo('')\">&#127968; Home</span>" +
+      "<span class='sep'>/</span><span class='cur'>&#128229; Shared With Me</span>";
+    fmRenderShared(filterText);
+    return;
+  }
+
+  if (!node || node.type !== "folder") {
+    gridEl.innerHTML = "<div class='empty'>Folder not found.</div>";
+    return;
+  }
+
+  var items = node.children || {};
+  var keys = Object.keys(items);
+
+  // Filter
+  if (filterText) {
+    keys = keys.filter(function(k){ return k.toLowerCase().includes(filterText.toLowerCase()); });
+  }
+
+  // Sort: folders first, then files
+  keys.sort(function(a,b){
+    var ta = items[a].type, tb = items[b].type;
+    if (ta === tb) return a.localeCompare(b);
+    return ta === "folder" ? -1 : 1;
+  });
+
+  // Update status
+  var fileCount = keys.filter(function(k){ return items[k].type === "file"; }).length;
+  var folderCount = keys.filter(function(k){ return items[k].type === "folder"; }).length;
+  document.getElementById("fm-status-right").textContent =
+    folderCount + " folder" + (folderCount !== 1 ? "s" : "") +
+    ", " + fileCount + " file" + (fileCount !== 1 ? "s" : "");
+
+  if (fmView === "grid") {
+    gridEl.style.display = "";
+    listEl.style.display = "none";
+    if (!keys.length) {
+      gridEl.innerHTML = "<div class='empty' style='grid-column:1/-1'>Empty folder — upload files or create a subfolder</div>";
+      return;
+    }
+    gridEl.innerHTML = keys.map(function(k) {
+      var item = items[k];
+      var isFolder = item.type === "folder";
+      var icon = isFolder ? "📁" : fIconByName(k);
+      var selClass = fmSelected === k ? " selected" : "";
+      var badge = (!isFolder && item.scan_clean === false)
+        ? "<span class='fm-item-badge br'>⚠</span>" : "";
+      return "<div class='fm-item" + (isFolder ? " fm-folder" : "") + selClass + "' " +
+        "onclick=\"fmSelect('" + escQ(k) + "')\" " +
+        "ondblclick=\"fmOpen('" + escQ(k) + "')\" " +
+        "oncontextmenu=\"fmCtxMenu(event,'" + escQ(k) + "')\">" +
+        badge +
+        "<span class='fm-item-icon'>" + icon + "</span>" +
+        "<div class='fm-item-name' title='" + escHtml(k) + "'>" + escHtml(k) + "</div>" +
+        (isFolder ? "" : "<div class='fm-item-size'>" + fmtBytes(item.size||0) + "</div>") +
+        "</div>";
+    }).join("");
+  } else {
+    gridEl.style.display = "none";
+    listEl.style.display = "";
+    if (!keys.length) {
+      listEl.innerHTML = "<div class='empty'>Empty folder</div>";
+      return;
+    }
+    listEl.innerHTML = "<div class='fm-list'>" + keys.map(function(k) {
+      var item = items[k];
+      var isFolder = item.type === "folder";
+      var icon = isFolder ? "📁" : fIconByName(k);
+      var selClass = fmSelected === k ? " selected" : "";
+      return "<div class='fm-list-row" + selClass + "' " +
+        "onclick=\"fmSelect('" + escQ(k) + "')\" " +
+        "ondblclick=\"fmOpen('" + escQ(k) + "')\" " +
+        "oncontextmenu=\"fmCtxMenu(event,'" + escQ(k) + "')\">" +
+        "<span class='fm-list-icon'>" + icon + "</span>" +
+        "<span class='fm-list-name'>" + escHtml(k) + "</span>" +
+        "<span class='fm-list-meta'>" + (isFolder ? "—" : fmtBytes(item.size||0)) + "</span>" +
+        "<span class='fm-list-date'>" + (item.date ? new Date(item.date).toLocaleDateString() : "—") + "</span>" +
+        "</div>";
+    }).join("") + "</div>";
+  }
+}
+
+function fmShowRecent() {
+  fmCwd = "__recent__";
+  fmHistory.push("");
+  var gridEl = document.getElementById("fm-grid-view");
+  var listEl = document.getElementById("fm-list-view");
+  document.getElementById("fm-breadcrumb").innerHTML = "<span class='cur'>🕐 Recent</span>";
+  document.getElementById("fm-back-btn").disabled = false;
+  document.getElementById("fm-back-btn").style.opacity = "1";
+  var items = fmRecentFiles.slice(0, 20);
+  if (fmView === "grid") {
+    gridEl.style.display = ""; listEl.style.display = "none";
+    if (!items.length) { gridEl.innerHTML = "<div class='empty' style='grid-column:1/-1'>No recent files.</div>"; return; }
+    gridEl.innerHTML = items.map(function(f) {
+      return "<div class='fm-item' onclick=\"fmOpenRecent('" + escQ(f.fid||"") + "','" + escQ(f.name) + "','" + escQ(f.mime||"") + "')\">" +
+        "<span class='fm-item-icon'>" + fIcon(f.mime||"") + "</span>" +
+        "<div class='fm-item-name' title='" + escHtml(f.name) + "'>" + escHtml(f.name) + "</div>" +
+        "<div class='fm-item-size'>" + fmtBytes(f.size||0) + "</div></div>";
+    }).join("");
+  } else {
+    gridEl.style.display = "none"; listEl.style.display = "";
+    listEl.innerHTML = "<div class='fm-list'>" + items.map(function(f) {
+      return "<div class='fm-list-row' onclick=\"fmOpenRecent('" + escQ(f.fid||"") + "','" + escQ(f.name) + "','" + escQ(f.mime||"") + "')\">" +
+        "<span class='fm-list-icon'>" + fIcon(f.mime||"") + "</span>" +
+        "<span class='fm-list-name'>" + escHtml(f.name) + "</span>" +
+        "<span class='fm-list-meta'>" + fmtBytes(f.size||0) + "</span>" +
+        "<span class='fm-list-date'>" + (f.date ? new Date(f.date).toLocaleDateString() : "—") + "</span></div>";
+    }).join("") + "</div>";
+  }
+  document.getElementById("fm-status-right").textContent = items.length + " recent files";
+}
+
+// ── Actions ─────────────────────────────────────────────────────
+function fmSelect(name) {
+  fmSelected = name;
+  fmRender();
+  var node = fmGetNode(fmCwd);
+  if (node && node.children && node.children[name]) {
+    var item = node.children[name];
+    document.getElementById("fm-status-left").textContent =
+      item.type === "folder" ? "📁 " + name : fIconByName(name) + " " + name + " — " + fmtBytes(item.size||0);
+  }
+}
+
+function fmOpen(name) {
+  var node = fmGetNode(fmCwd);
+  if (!node || !node.children || !node.children[name]) return;
+  var item = node.children[name];
+  if (item.type === "folder") {
+    fmNavTo(fmJoinPath(fmCwd, name));
+  } else if (item.fid) {
+    // Uploaded file that also exists on server — use file viewer
+    viewFile(item.fid, name, item.mime || "");
+  } else {
+    // Local-only file (e.g. saved download blob)
+    if (item.blobUrl) {
+      window.open(item.blobUrl, "_blank");
+    }
+  }
+}
+
+function fmOpenRecent(fid, name, mime) {
+  if (fid) viewFile(fid, name, mime);
+}
+
+// ── Upload (from toolbar button or drag-drop) ───────────────────
+function fmTriggerUpload() {
+  document.getElementById("fm-file-input").click();
+}
+
+async function fmHandleFileSelect(files) {
+  if (!files || !files.length) return;
+  for (var i = 0; i < files.length; i++) {
+    await fmUploadOne(files[i]);
+  }
+  document.getElementById("fm-file-input").value = "";
+}
+
+async function fmUploadOne(file) {
+  var scanBar = document.getElementById("fm-scan-bar");
+  var pb = document.getElementById("fm-pb");
+  var plbl = document.getElementById("fm-pb-lbl");
+  var scanRes = document.getElementById("fm-scan-result");
+  scanBar.style.display = "block";
+  pb.style.width = "15%"; plbl.textContent = "Uploading " + file.name + "..."; scanRes.textContent = "";
+  setTimeout(function(){ pb.style.width = "50%"; plbl.textContent = "Virus scanning..."; }, 500);
+  setTimeout(function(){ pb.style.width = "80%"; plbl.textContent = "Verifying..."; }, 1400);
+  try {
+    var fd = new FormData();
+    fd.append("file", file);
+    var res = await apiFetch("/api/employee/upload-doc", {method:"POST", body:fd});
+    var data = await res.json();
+    pb.style.width = "100%";
+    if (res.ok) {
+      scanRes.style.color = "var(--green)";
+      scanRes.textContent = "✓ CLEAN — " + file.name + " uploaded";
+      // Add to virtual FS in current folder
+      var node = fmGetNode(fmCwd === "__recent__" ? "" : fmCwd);
+      if (node && node.type === "folder") {
+        node.children[file.name] = {
+          type: "file", name: file.name,
+          size: file.size, date: Date.now(),
+          mime: file.type,
+          fid: data.file_id || null,
+          scan_clean: true
+        };
+        fmSaveFS();
+        // Add to recent
+        fmRecentFiles.unshift({name:file.name, fid:data.file_id||null, mime:file.type, size:file.size, date:Date.now()});
+        if (fmRecentFiles.length > 20) fmRecentFiles.pop();
+      }
+      fmRender();
+      loadMyFmUploads();
+    } else {
+      scanRes.style.color = "var(--red)";
+      scanRes.textContent = "✗ " + (data.scan && !data.scan.clean ? "THREAT DETECTED — " + file.name + " rejected" : (data.error || "Upload failed"));
+    }
+  } catch(e) {
+    scanRes.style.color = "var(--red)";
+    scanRes.textContent = "✗ Network error for " + file.name;
+  }
+  setTimeout(function(){ scanBar.style.display = "none"; pb.style.width = "0%"; }, 3000);
+}
+
+// ── Drag & drop ─────────────────────────────────────────────────
+function fmDragOver(e) {
+  e.preventDefault();
+  document.getElementById("fm-drop-overlay").style.display = "block";
+  document.getElementById("fm-grid-view").style.opacity = "0.3";
+  document.getElementById("fm-list-view").style.opacity = "0.3";
+}
+function fmDragLeave(e) {
+  if (!e.currentTarget.contains(e.relatedTarget)) {
+    document.getElementById("fm-drop-overlay").style.display = "none";
+    document.getElementById("fm-grid-view").style.opacity = "1";
+    document.getElementById("fm-list-view").style.opacity = "1";
+  }
+}
+async function fmDrop(e) {
+  e.preventDefault();
+  document.getElementById("fm-drop-overlay").style.display = "none";
+  document.getElementById("fm-grid-view").style.opacity = "1";
+  document.getElementById("fm-list-view").style.opacity = "1";
+  var files = e.dataTransfer.files;
+  if (files && files.length) await fmHandleFileSelect(files);
+}
+
+// ── New folder ──────────────────────────────────────────────────
+function fmNewFolder() {
+  var name = prompt("Folder name:");
+  if (!name || !name.trim()) return;
+  name = name.trim().replace(/[\/\\:*?"<>|]/g, "_");
+  var node = fmGetNode(fmCwd);
+  if (!node || !node.children) return;
+  if (node.children[name]) { alert("A folder with that name already exists."); return; }
+  node.children[name] = { type:"folder", name:name, children:{} };
+  fmSaveFS();
+  fmRender();
+}
+
+// ── View toggle ─────────────────────────────────────────────────
+function fmSetView(v) {
+  fmView = v;
+  document.getElementById("fm-view-grid").classList.toggle("active", v === "grid");
+  document.getElementById("fm-view-list").classList.toggle("active", v === "list");
+  fmRender();
+}
+
+// ── Search ──────────────────────────────────────────────────────
+function fmSearch(val) {
+  if (!val.trim()) { fmRender(); return; }
+  fmRender(val.trim());
+}
+
+// ── Context menu ────────────────────────────────────────────────
+function fmCtxMenu(e, name) {
+  e.preventDefault();
+  fmCtxTarget = name;
+  fmSelected = name;
+  fmRender();
+  var menu = document.getElementById("fm-ctx-menu");
+  menu.style.left = e.clientX + "px";
+  menu.style.top  = e.clientY + "px";
+  menu.style.display = "block";
+}
+document.addEventListener("click", function(){ document.getElementById("fm-ctx-menu").style.display = "none"; });
+
+function fmCtxOpen() {
+  if (fmCtxTarget) fmOpen(fmCtxTarget);
+}
+function fmCtxRename() {
+  if (!fmCtxTarget) return;
+  var newName = prompt("Rename to:", fmCtxTarget);
+  if (!newName || !newName.trim() || newName.trim() === fmCtxTarget) return;
+  newName = newName.trim().replace(/[\/\\:*?"<>|]/g, "_");
+  var node = fmGetNode(fmCwd);
+  if (!node || !node.children) return;
+  if (node.children[newName]) { alert("Name already in use."); return; }
+  node.children[newName] = node.children[fmCtxTarget];
+  node.children[newName].name = newName;
+  delete node.children[fmCtxTarget];
+  fmSaveFS();
+  fmSelected = newName;
+  fmRender();
+}
+function fmCtxNewFolder() {
+  fmNewFolder();
+}
+function fmCtxDelete() {
+  if (!fmCtxTarget) return;
+  if (!confirm("Delete \"" + fmCtxTarget + "\"? This cannot be undone.")) return;
+  var node = fmGetNode(fmCwd);
+  if (!node || !node.children) return;
+  delete node.children[fmCtxTarget];
+  fmSaveFS();
+  fmSelected = null;
+  fmRender();
+}
+
+// ── Save-to (when downloading a shared file) ────────────────────
+var _saveToFid = null, _saveToFname = null;
+var _saveToSelectedPath = "";
+
+function openSaveTo(fid, fname) {
+  _saveToFid = fid; _saveToFname = fname;
+  _saveToSelectedPath = "";
+  var msg = document.getElementById("saveto-msg");
+  msg.className = "msg"; msg.textContent = "";
+  document.getElementById("saveto-new-folder-input").style.display = "none";
+  renderSaveToTree();
+  document.getElementById("saveto-modal").style.display = "flex";
+}
+function closeSaveTo() {
+  document.getElementById("saveto-modal").style.display = "none";
+}
+function renderSaveToTree() {
+  var tree = document.getElementById("saveto-tree");
+  tree.innerHTML = buildSaveToTreeHtml(fmFS, "", 0);
+}
+function buildSaveToTreeHtml(node, path, depth) {
+  if (!node || node.type !== "folder") return "";
+  var label = depth === 0 ? "🏠 Home" : "📁 " + node.name;
+  var selClass = _saveToSelectedPath === path ? " selected" : "";
+  var html = "<div class='save-tree-item" + selClass + "' onclick=\"_saveToSelectedPath='" + escQ(path) + "';renderSaveToTree()\">" +
+    "<span class='save-tree-indent' style='width:" + (depth*16) + "px;display:inline-block'></span>" +
+    label + "</div>";
+  if (node.children) {
+    Object.keys(node.children).sort().forEach(function(k) {
+      if (node.children[k].type === "folder") {
+        html += buildSaveToTreeHtml(node.children[k], path ? path + "/" + k : k, depth + 1);
+      }
+    });
+  }
+  return html;
+}
+function fmNewFolderInSaveTo() {
+  var inp = document.getElementById("saveto-new-folder-input");
+  inp.style.display = inp.style.display === "none" ? "block" : "none";
+  if (inp.style.display === "block") inp.focus();
+}
+document.addEventListener("keydown", function(e) {
+  var inp = document.getElementById("saveto-new-folder-input");
+  if (e.key === "Enter" && inp && inp.style.display !== "none" && document.activeElement === inp) {
+    var name = inp.value.trim().replace(/[\/\\:*?"<>|]/g, "_");
+    if (!name) return;
+    var destNode = fmGetNode(_saveToSelectedPath);
+    if (!destNode || !destNode.children) return;
+    if (destNode.children[name]) { alert("Folder already exists."); return; }
+    destNode.children[name] = { type:"folder", name:name, children:{} };
+    fmSaveFS();
+    _saveToSelectedPath = _saveToSelectedPath ? _saveToSelectedPath + "/" + name : name;
+    inp.value = ""; inp.style.display = "none";
+    renderSaveToTree();
+  }
+});
+async function confirmSaveTo() {
+  if (!_saveToFid) return;
+  var msg = document.getElementById("saveto-msg");
+  try {
+    var url = "/api/employee/download-file/" + _saveToFid + "?token=" + SESSION_TOKEN;
+    var res = await fetch(url, { headers:{"X-Auth-Token": SESSION_TOKEN} });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    var blob = await res.blob();
+    var blobUrl = URL.createObjectURL(blob);
+    // Place file in selected folder in virtual FS
+    var destNode = fmGetNode(_saveToSelectedPath);
+    if (!destNode || destNode.type !== "folder") throw new Error("Invalid destination");
+    destNode.children[_saveToFname] = {
+      type:"file", name:_saveToFname,
+      size: blob.size, date: Date.now(),
+      mime: blob.type, fid: _saveToFid,
+      blobUrl: blobUrl, scan_clean: true
+    };
+    fmSaveFS();
+    fmRecentFiles.unshift({name:_saveToFname, fid:_saveToFid, mime:blob.type, size:blob.size, date:Date.now()});
+    if (fmRecentFiles.length > 20) fmRecentFiles.pop();
+    msg.className = "msg ok";
+    msg.textContent = "Saved to " + (_saveToSelectedPath || "Home") + " ✓";
+    setTimeout(closeSaveTo, 1500);
+    // Refresh FM if on files tab
+    var ap = document.querySelector(".panel.active");
+    if (ap && ap.id === "panel-files") fmRender();
+  } catch(e) {
+    msg.className = "msg err";
+    msg.textContent = "Save failed: " + e.message;
+  }
+}
+
+// ── Uploaded files list (below shared-with-me, inside fm context) ──
+async function loadMyFmUploads() {
+  // Sync server uploads into FM home if not already present
+  try {
+    var res = await apiFetch("/api/employee/my-uploads");
+    var files = await res.json();
+    if (!files || !files.length) return;
+    var homeNode = fmFS; // root = Home
+    files.forEach(function(f) {
+      var name = f.original_name || "file";
+      // Only add if not already tracked
+      if (!homeNode.children[name]) {
+        homeNode.children[name] = {
+          type:"file", name:name,
+          size: f.file_size||0, date: f.uploaded_at ? new Date(f.uploaded_at).getTime() : Date.now(),
+          mime: f.file_type||"", fid: f._id||null, scan_clean: f.scan_clean !== false
+        };
+      }
+    });
+    fmSaveFS();
+    var ap = document.querySelector(".panel.active");
+    if (ap && ap.id === "panel-files") fmRender();
+  } catch(e){}
+}
+
+// FILES — "Shared With Me" section (unchanged logic)
+function fmtBytes(b){if(!b)return"—";if(b<1024)return b+" B";if(b<1048576)return(b/1024).toFixed(1)+" KB";return(b/1048576).toFixed(1)+" MB";}
+function fIcon(m){if(!m)return"📄";if(m.includes("pdf"))return"📕";if(m.includes("word")||m.includes("docx"))return"📘";if(m.includes("excel")||m.includes("xlsx"))return"📗";if(m.includes("image"))return"🖼";if(m.includes("text"))return"📃";return"📄";}
+function fIconByName(n){var e=n.split(".").pop().toLowerCase();if(e==="pdf")return"📕";if(e==="docx"||e==="doc")return"📘";if(e==="xlsx"||e==="xls")return"📗";if(e==="pptx"||e==="ppt")return"📙";if(["png","jpg","jpeg","gif","webp"].includes(e))return"🖼";if(["txt","csv","json","xml"].includes(e))return"📃";return"📄";}
+
+function _dlBtn(fid, fname, dlStatus){
+  return ""; // Intern: view only — no download
+}
+
+function _fwdBtn(fid, fname, fwdStatus){
+  return ""; // Intern: view only — no forward
+}
+
+// ── Shared With Me — rendered inside FM sidebar view ───────────────
+var _fmSharedCache = null;
+
+function fmInvalidateSharedCache() {
+  _fmSharedCache = null;
+  if (fmCwd === "__shared__") fmRenderShared();
+}
+
+async function fmRenderShared(filterText) {
+  var gridEl = document.getElementById("fm-grid-view");
+  var listEl = document.getElementById("fm-list-view");
+  gridEl.style.display = ""; listEl.style.display = "none";
+  gridEl.innerHTML = "<div class='empty' style='grid-column:1/-1'>Loading...</div>";
+  try {
+    if (!_fmSharedCache) {
+      var r1 = await apiFetch("/api/employee/files");
+      var r2 = await apiFetch("/api/employee/my-file-approvals");
+      _fmSharedCache = { files: (await r1.json())||[], approvals: (await r2.json())||{} };
+    }
+    var files     = _fmSharedCache.files.slice();
+    var approvals = _fmSharedCache.approvals;
+    if (filterText) {
+      files = files.filter(function(f){
+        return (f.original_name||"").toLowerCase().includes(filterText.toLowerCase());
+      });
+    }
+    var sbRight = document.getElementById("fm-status-right");
+    if (sbRight) sbRight.textContent = files.length + " file" + (files.length!==1?"s":"") + " shared with you";
+    if (!files.length) {
+      gridEl.innerHTML = "<div class='empty' style='grid-column:1/-1'>No files shared with you yet.</div>";
+      return;
+    }
+    if (fmView === "list") {
+      gridEl.style.display = "none"; listEl.style.display = "";
+      listEl.innerHTML = "<div class='fm-list'>" + files.map(function(f){
+        var fid   = f._id||"";
+        var fname = (f.original_name||"file").replace(/'/g,"").replace(/"/g,"");
+        var mime  = f.file_type||"";
+        var fa    = approvals[fid]||{};
+        return "<div class='fm-list-row'>" +
+          "<span class='fm-list-icon'>" + fIcon(mime) + "</span>" +
+          "<span class='fm-list-name'>" + escHtml(f.original_name||"—") + "</span>" +
+          "<span class='fm-list-meta'>" + fmtBytes(f.file_size) + "</span>" +
+          "<span class='fm-list-date'>" + (f.uploaded_at||"—") + "</span>" +
+          "<span style='display:flex;gap:4px;'>" +
+            "<button class='btn btn-sm' style='font-size:10px;padding:3px 7px;' onclick='viewFile(\""+fid+"\",\""+fname+"\",\""+mime+"\")'>&#128065;</button>" +
+            _shDlBtn(fid,fname,fa["download"]||"") +
+            _shFwdBtn(fid,fname,fa["forward"]||"") +
+          "</span></div>";
+      }).join("") + "</div>";
+      return;
+    }
+    gridEl.innerHTML = files.map(function(f){
+      var fid   = f._id||"";
+      var fname = (f.original_name||"file").replace(/'/g,"").replace(/"/g,"");
+      var mime  = f.file_type||"";
+      var fa    = approvals[fid]||{};
+      var vis   = f.visibility==="public"
+        ? "<span class='badge bb' style='font-size:9px;'>PUBLIC</span>"
+        : "<span class='badge by' style='font-size:9px;'>PRIVATE</span>";
+      var fwdb  = f.forwarded
+        ? "<span class='badge' style='background:rgba(0,200,100,0.15);color:#00c864;border:1px solid #00c864;font-size:9px;'>&#9993; FWD</span>"
+        : "";
+      return "<div class='fm-shared-card'>" +
+        "<div style='font-size:28px;'>" + fIcon(mime) + "</div>" +
+        "<div class='fm-shared-name' title='" + escHtml(f.original_name||"") + "'>" + escHtml(f.original_name||"—") + "</div>" +
+        "<div class='fm-shared-meta'>" + fmtBytes(f.file_size) + " &bull; " + (f.uploaded_at||"—") + "</div>" +
+        "<div style='display:flex;gap:4px;flex-wrap:wrap;'>" + vis + fwdb + "</div>" +
+        "<div class='fm-shared-actions'>" +
+          "<button class='btn btn-sm' style='font-size:10px;padding:4px 8px;' onclick='viewFile(\""+fid+"\",\""+fname+"\",\""+mime+"\")'>&#128065; VIEW</button>" +
+          _shDlBtn(fid,fname,fa["download"]||"") +
+          _shFwdBtn(fid,fname,fa["forward"]||"") +
+        "</div></div>";
+    }).join("");
+  } catch(e) {
+    gridEl.innerHTML = "<div class='empty' style='grid-column:1/-1;color:var(--red)'>Failed to load shared files.</div>";
+    console.error("fmRenderShared:",e);
+  }
+}
+
+function _shDlBtn(fid, fname, s) {
+  return ""; // Intern: view only — no download
+}
+
+function _shFwdBtn(fid, fname, s) {
+  return ""; // Intern: view only — no forward
+}
+
+// loadFiles now just refreshes the FM shared view (fgrid removed)
+async function loadFiles(){
+  fmInvalidateSharedCache();
+}
+
+// FILE VIEWER
+var currentFid=null, currentFname=null, camInt=null, phoneInt=null;
+
+function startCamWatch(){
+  // Tell agent: file opened — webcam should turn ON
+  apiFetch("/api/agent/file-viewing",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({active:true})
+  }).catch(function(){});
+
+  // Poll agent for phone detection every 2 seconds
+  phoneInt=setInterval(async function(){
+    try{
+      var res=await apiFetch("/api/agent/phone-status");
+      if(!res.ok) return;
+      var data=await res.json();
+      if(data.phone_detected){
+        stopCamWatch();
+        closeView();
+        var el=document.getElementById("st-cam");
+        if(el){el.textContent="PHONE!";el.style.color="var(--red)";}
+        secAlert("⊘ RECORDING DETECTED — FILE CLOSED",
+          "Someone attempted to photograph or record the screen.\nFile closed automatically.\nIncident reported to manager.","red");
+        apiFetch("/api/agent/event-browser",{method:"POST",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({event_type:"PHONE_DETECTED",
+            detail:"Phone detected by webcam while viewing: "+(currentFname||""),
+            risk:"HIGH",blocked:true})}).catch(function(){});
+      }
+    }catch(e){}
+  },2000);
+
+  // Existing browser-side camera permission check
+  camInt=setInterval(async function(){
+    var el=document.getElementById("st-cam");
+    try{
+      if(!navigator.permissions){if(el){el.textContent="SECURE";el.style.color="var(--green)";}return;}
+      var perm=await navigator.permissions.query({name:"camera"});
+      if(perm.state==="granted"){
+        if(navigator.mediaDevices && navigator.mediaDevices.enumerateDevices){
+          var devices=await navigator.mediaDevices.enumerateDevices();
+          var activeVideo=devices.some(function(d){return d.kind==="videoinput"&&d.label&&d.label.length>0;});
+          if(activeVideo){
+            stopCamWatch();closeView();
+            if(el){el.textContent="DETECTED!";el.style.color="var(--red)";}
+            apiFetch("/api/agent/event-browser",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({event_type:"CAMERA_BLOCKED",detail:"Camera active while viewing: "+(currentFname||""),risk:"HIGH",blocked:true})}).catch(function(){});
+            secAlert("CAMERA DETECTED — FILE CLOSED","Live camera detected while viewing document. File closed and incident logged.","red");
+            return;
+          }
+        }
+      }
+      if(el){el.textContent="SECURE";el.style.color="var(--green)";}
+    }catch(e){if(el){el.textContent="SECURE";el.style.color="var(--green)";}}
+  },3000);
+}
+
+function stopCamWatch(){
+  // Tell agent: file closed — webcam should turn OFF
+  apiFetch("/api/agent/file-viewing",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({active:false})
+  }).catch(function(){});
+  if(camInt){clearInterval(camInt);camInt=null;}
+  if(phoneInt){clearInterval(phoneInt);phoneInt=null;}
+}
+
+async function viewFile(fid,fname,mime){
+  currentFid=fid;currentFname=fname;
+  var wm=document.getElementById("watermark");
+  if(wm)wm.textContent=SESSION_EMAIL+" | "+new Date().toLocaleString()+" | CONFIDENTIAL";
+  document.getElementById("view-title").textContent=fname;
+  document.getElementById("view-msg").className="msg";
+  document.getElementById("view-msg").textContent="";
+
+  // Intern: view only — no download/forward actions
+  var ftr=document.getElementById("view-modal-ftr");
+  ftr.innerHTML=
+    "<span style='font-family:Share Tech Mono,monospace;font-size:10px;color:var(--muted);padding:4px 10px;letter-spacing:1px;'>👁 VIEW ONLY — Intern access</span>"+
+    "<button class='btn btn-sm btn-r' onclick='closeView()' style='margin-left:auto;'>CLOSE</button>";
+
+  var url="/api/employee/view-file/"+fid+"?token="+SESSION_TOKEN;
+  var body="";
+  if(mime.includes("pdf")){
+    body="<embed src='"+url+"' type='application/pdf' style='width:100%;height:520px;border:none;display:block;'>";
+  }else if(mime.includes("image")){
+    body="<div style='padding:20px;text-align:center'><img src='"+url+"' style='max-width:100%;max-height:500px;border-radius:8px' oncontextmenu='return false' draggable='false'></div>";
+  }else if(mime.includes("text")||mime.includes("csv")||mime.includes("json")){
+    try{
+      var r=await apiFetch("/api/employee/view-file/"+fid);
+      var t=await r.text();
+      body="<div style='padding:20px'><pre style='background:var(--surface2);padding:16px;border-radius:8px;font-family:Share Tech Mono,monospace;font-size:12px;overflow:auto;max-height:480px;user-select:none' oncontextmenu='return false'>"+t.replace(/</g,"&lt;").replace(/>/g,"&gt;").substring(0,10000)+"</pre></div>";
+    }catch(e){body="<div style='padding:40px;text-align:center;color:var(--muted)'>Cannot preview.</div>";}
+  }else{
+    body="<div style='padding:60px;text-align:center'><div style='font-size:64px;margin-bottom:16px'>"+fIcon(mime)+"</div><div style='color:var(--muted);font-family:Share Tech Mono,monospace'>No preview available.</div></div>";
+  }
+  document.getElementById("view-body").innerHTML=body;
+  document.getElementById("view-modal").style.display="flex";
+  startCamWatch();
+}
+function closeView(){
+  stopCamWatch();
+  document.getElementById("view-modal").style.display="none";
+  document.getElementById("view-body").innerHTML="";
+  currentFid=null;currentFname=null;
+}
+
+// REQUESTS
+var allEmps=[];
+async function loadEmps(){
+  try{var d=await(await apiFetch("/api/employee/other-employees")).json();allEmps=d||[];}catch(e){}
+}
+
+// ── INTERN: all write/request actions are no-ops ─────────────────
+async function doDownload(){ return; }
+async function reqAccess(){ return; }
+function reqFwd(){ return; }
+function doForwardSend(){ return; }
+function openSaveTo(){ return; }
+// ─────────────────────────────────────────────────────────────────
+function openFwdModal(sendMode){
+  var sel=document.getElementById("fwd-select");
+  sel.innerHTML=allEmps.length?allEmps.map(function(e){return "<option value='"+e.email+"'>"+e.name+" ("+e.email+")</option>";}).join(""):"<option value=''>No other employees</option>";
+  var title=document.getElementById("fwd-modal-title");
+  var btn=document.getElementById("fwd-submit-btn");
+  var note=document.getElementById("fwd-mode-note");
+  if(sendMode){
+    if(title)title.textContent="FORWARD FILE";
+    if(btn)btn.textContent="SEND FORWARD";
+    if(note){note.textContent="Your forward request was approved. Select recipient to send.";note.style.color="var(--green)";}
+  } else {
+    if(title)title.textContent="REQUEST FORWARD";
+    if(btn)btn.textContent="SEND REQUEST";
+    if(note){note.textContent="This will send a forward request to the manager for approval.";note.style.color="var(--muted)";}
+  }
+  document.getElementById("fwd-modal").dataset.sendMode = sendMode ? "1" : "0";
+  document.getElementById("fwd-modal").style.display="flex";
+}
+function closeFwdModal(){document.getElementById("fwd-modal").style.display="none";document.getElementById("fwd-msg").textContent="";}
+
+async function submitFwd(){
+  var to=document.getElementById("fwd-select").value;
+  if(!to)return;
+  var m=document.getElementById("fwd-msg");
+  var sendMode = document.getElementById("fwd-modal").dataset.sendMode === "1";
+  try{
+    var res=await apiFetch("/api/employee/request-access",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({file_id:currentFid,file_name:currentFname,request_type:"forward",forward_to:to})});
+    var d=await res.json();
+    m.className="msg "+(res.ok?"ok":"err");
+    m.textContent=res.ok?(sendMode?"File forwarded successfully!":"Forward request submitted! Awaiting manager approval."):(d.error||"Failed.");
+    if(res.ok){loadFiles();setTimeout(closeFwdModal,1500);}
+  }catch(e){m.className="msg err";m.textContent="Server error.";}
+}
+
+
+// ═══════════════════════════════════════════
+// TRAVEL
+// ═══════════════════════════════════════════
+async function loadTravelStatus(){
+  try{
+    var d=await(await apiFetch("/api/employee/travel-status")).json();
+    var box=document.getElementById("tr-status");
+    if(!d||!d.status){
+      box.innerHTML="<div style='color:var(--muted);font-family:Share Tech Mono,monospace;font-size:12px;text-align:center;padding:20px'>No active travel request.</div>";
+      return;
+    }
+    var col=d.status==="approved"?"var(--green)":d.status==="pending"?"var(--yellow)":"var(--red)";
+    var statusIcon=d.status==="approved"?"✅":d.status==="pending"?"⏳":"❌";
+    box.innerHTML=
+      "<div style='display:flex;flex-direction:column;gap:12px'>"+
+      // Status badge
+      "<div style='display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:rgba(0,0,0,0.2);border-radius:8px;border:1px solid "+col+"33'>"+
+        "<span style='font-family:Share Tech Mono,monospace;font-size:10px;color:var(--muted);letter-spacing:2px'>STATUS</span>"+
+        "<span style='font-family:Share Tech Mono,monospace;font-size:12px;font-weight:700;color:"+col+"'>"+statusIcon+" "+(d.status||"").toUpperCase()+"</span>"+
+      "</div>"+
+      // Route
+      "<div style='background:rgba(0,0,0,0.15);border-radius:8px;padding:12px 14px;'>"+
+        "<div style='font-family:Share Tech Mono,monospace;font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:8px'>ROUTE</div>"+
+        "<div style='display:flex;align-items:center;gap:8px;flex-wrap:wrap;'>"+
+          "<span style='font-size:13px;font-weight:700;color:#fff'>"+(d.source||"—")+"</span>"+
+          "<span style='color:var(--blue);font-size:16px'>→</span>"+
+          "<span style='font-size:13px;font-weight:700;color:#fff'>"+(d.destination||"—")+"</span>"+
+        "</div>"+
+      "</div>"+
+      // Dates
+      "<div style='display:grid;grid-template-columns:1fr 1fr;gap:8px'>"+
+        "<div style='background:rgba(0,0,0,0.15);border-radius:8px;padding:10px 12px;'>"+
+          "<div style='font-family:Share Tech Mono,monospace;font-size:9px;color:var(--muted);margin-bottom:4px;letter-spacing:1px'>FROM</div>"+
+          "<div style='font-family:Share Tech Mono,monospace;font-size:11px;color:var(--text)'>"+(d.start_date||"—")+"</div>"+
+        "</div>"+
+        "<div style='background:rgba(0,0,0,0.15);border-radius:8px;padding:10px 12px;'>"+
+          "<div style='font-family:Share Tech Mono,monospace;font-size:9px;color:var(--muted);margin-bottom:4px;letter-spacing:1px'>TO</div>"+
+          "<div style='font-family:Share Tech Mono,monospace;font-size:11px;color:var(--text)'>"+(d.end_date||"—")+"</div>"+
+        "</div>"+
+      "</div>"+
+      // Reason
+      "<div style='background:rgba(0,0,0,0.15);border-radius:8px;padding:10px 12px;'>"+
+        "<div style='font-family:Share Tech Mono,monospace;font-size:9px;color:var(--muted);margin-bottom:4px;letter-spacing:1px'>REASON</div>"+
+        "<div style='font-size:13px;color:var(--text)'>"+(d.reason||"—")+"</div>"+
+      "</div>"+
+      // Reviewed by
+      (d.approved_by?
+        "<div style='font-family:Share Tech Mono,monospace;font-size:10px;color:var(--muted);padding:6px 0;border-top:1px solid var(--border);'>"+
+          "Reviewed by: <span style='color:var(--text)'>"+d.approved_by+"</span></div>":"")+
+      "</div>";
+  }catch(e){console.error("travel status",e);}
+}
+
+async function loadTravelHistory(){
+  try{
+    // Try dedicated history endpoint first; fall back to status only
+    var d = null;
+    try {
+      var res = await apiFetch("/api/employee/travel-history");
+      if (res.ok) d = await res.json();
+    } catch(e){}
+
+    var box = document.getElementById("tr-history");
+
+    if (!d || !d.length) {
+      // Fallback: show current status record as single-item history
+      try {
+        var cur = await (await apiFetch("/api/employee/travel-status")).json();
+        if (cur && cur.status) d = [cur]; else d = [];
+      } catch(e){ d = []; }
+    }
+
+    if (!d.length) {
+      box.innerHTML = "<div style='color:var(--muted);font-family:Share Tech Mono,monospace;font-size:12px;text-align:center;padding:32px'>No travel history yet.</div>";
+      return;
+    }
+
+    box.innerHTML = d.map(function(r){
+      var col = r.status==="approved"?"var(--green)":r.status==="pending"?"var(--yellow)":"var(--red)";
+      var icon = r.status==="approved"?"✅":r.status==="pending"?"⏳":"❌";
+      return "<div class='tr-hist-row'>"+
+        "<div class='tr-hist-header'>"+
+          "<div class='tr-hist-route'>"+(r.source||"—")+" → "+(r.destination||"—")+"</div>"+
+          "<span class='badge' style='color:"+col+";border-color:"+col+";background:transparent'>"+icon+" "+(r.status||"").toUpperCase()+"</span>"+
+        "</div>"+
+        "<div class='tr-hist-meta'>"+
+          "<span>📅 "+(r.start_date||"—")+" → "+(r.end_date||"—")+"</span>"+
+          (r.reason?"<span>📝 "+escHtml(r.reason)+"</span>":"")+
+          (r.approved_by?"<span>👤 Reviewed by: "+escHtml(r.approved_by)+"</span>":"")+
+          (r.requested_at?"<span>🕐 Requested: "+escHtml(r.requested_at)+"</span>":"")+
+        "</div>"+
+      "</div>";
+    }).join("");
+  }catch(e){console.error("travel history",e);}
+}
+
+async function submitTravel(){
+  var src   =document.getElementById("tr-src").value.trim();
+  var dest  =document.getElementById("tr-dest").value.trim();
+  var sd    =document.getElementById("tr-start-date").value;
+  var st    =document.getElementById("tr-start-time").value;
+  var ed    =document.getElementById("tr-end-date").value;
+  var et    =document.getElementById("tr-end-time").value;
+  var reason=document.getElementById("tr-reason").value.trim();
+  var msg   =document.getElementById("tr-msg");
+  if(!src||!dest){msg.className="msg err";msg.textContent="Please pin both source and destination on the map.";return;}
+  if(!sd||!ed)   {msg.className="msg err";msg.textContent="Start and end dates required.";return;}
+  if(!reason)    {msg.className="msg err";msg.textContent="Please provide a reason for travel.";return;}
+  var start_dt=sd+"T"+(st||"09:00");
+  var end_dt  =ed+"T"+(et||"18:00");
+  if(new Date(end_dt)<=new Date(start_dt)){msg.className="msg err";msg.textContent="End must be after start.";return;}
+  try{
+    var payload={source:src,destination:dest,start_date:start_dt,end_date:end_dt,reason:reason,src_coords:srcCoords,dst_coords:dstCoords};
+    var res=await apiFetch("/api/employee/request-travel",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+    var d=await res.json();
+    msg.className="msg "+(res.ok?"ok":"err");
+    msg.textContent=res.ok?"Travel request submitted! Awaiting manager approval.":(d.error||"Failed.");
+    if(res.ok){ loadTravelStatus(); loadTravelHistory(); }
+  }catch(e){msg.className="msg err";msg.textContent="Server error.";}
+}
+
+// ═══════════════════════════════════════════
+// MAP SEARCH — Nominatim forward geocoding
+// ═══════════════════════════════════════════
+var _searchTimeout = null;
+var _searchResults = [];
+
+async function searchMapPlace() {
+  var q = document.getElementById("map-search-input").value.trim();
+  if (!q) return;
+  hideSuggestions();
+  try {
+    var r = await fetch("https://nominatim.openstreetmap.org/search?q="+encodeURIComponent(q)+"&format=json&limit=6&addressdetails=1",{headers:{"Accept-Language":"en"}});
+    var results = await r.json();
+    if (!results || !results.length) { showNoResults(); return; }
+    _searchResults = results;
+    if (results.length === 1) flyToResultIdx(0); else showSuggestions(results);
+  } catch(e) { console.error("Map search error:", e); }
+}
+function onMapSearchInput(val) {
+  clearTimeout(_searchTimeout);
+  if (val.length < 2) { hideSuggestions(); return; }
+  _searchTimeout = setTimeout(async function() {
+    try {
+      var r = await fetch("https://nominatim.openstreetmap.org/search?q="+encodeURIComponent(val)+"&format=json&limit=6&addressdetails=1",{headers:{"Accept-Language":"en"}});
+      var results = await r.json();
+      if (results && results.length) { _searchResults = results; showSuggestions(results); } else hideSuggestions();
+    } catch(e) { hideSuggestions(); }
+  }, 350);
+}
+function showSuggestions(results) {
+  var box = document.getElementById("map-suggestions");
+  box.innerHTML = results.map(function(r, i) {
+    var parts = r.display_name.split(",");
+    var label = parts.slice(0, Math.min(4, parts.length)).join(",").trim();
+    var sub   = parts.slice(Math.min(4, parts.length), Math.min(6, parts.length)).join(",").trim();
+    return "<div class='map-suggest-item' onclick='flyToResultIdx("+i+")'><div style='font-weight:600;font-size:13px;'>"+escHtml(label)+"</div>"+(sub?"<div style='font-size:11px;color:var(--muted)'>"+escHtml(sub)+"</div>":"")+"</div>";
+  }).join("");
+  box.style.display = "block";
+}
+function showNoResults() {
+  var box = document.getElementById("map-suggestions");
+  box.innerHTML = "<div class='map-suggest-item' style='color:var(--muted);cursor:default;'>No places found — try a different name</div>";
+  box.style.display = "block";
+}
+function hideSuggestions() {
+  var box = document.getElementById("map-suggestions");
+  if (box) box.style.display = "none";
+}
+function flyToResultIdx(idx) {
+  var result = _searchResults[idx];
+  if (!result) return;
+  hideSuggestions();
+  var parts = result.display_name.split(",");
+  document.getElementById("map-search-input").value = parts.slice(0, 3).join(",").trim();
+  if (!trMap) return;
+  var lat = parseFloat(result.lat), lon = parseFloat(result.lon);
+  var bbox = result.boundingbox;
+  if (bbox) {
+    trMap.flyToBounds([[parseFloat(bbox[0]),parseFloat(bbox[2])],[parseFloat(bbox[1]),parseFloat(bbox[3])]],{padding:[30,30],maxZoom:17,duration:1.0});
+  } else {
+    trMap.flyTo([lat, lon], 15, {duration:1.0});
+  }
+}
+function escHtml(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function escHtmlS(s){return escHtml(s);}
+function escQ(s){return String(s).replace(/\\/g,"\\\\").replace(/'/g,"\\'");}
+
+document.addEventListener("click", function(e) {
+  var box = document.getElementById("map-suggestions");
+  var inp = document.getElementById("map-search-input");
+  if (box && inp && !box.contains(e.target) && e.target !== inp) hideSuggestions();
+});
+document.addEventListener("keydown", function(e) {
+  var box = document.getElementById("map-suggestions");
+  if (!box || box.style.display === "none") return;
+  var items = box.querySelectorAll(".map-suggest-item");
+  var active = box.querySelector(".map-suggest-item.hovered");
+  var idx = -1;
+  items.forEach(function(it,i){ if(it===active) idx=i; });
+  if (e.key === "ArrowDown") {
+    e.preventDefault();
+    if(active) active.classList.remove("hovered");
+    var next = items[Math.min(idx+1, items.length-1)];
+    if(next){ next.classList.add("hovered"); next.style.background="rgba(0,136,255,0.18)"; }
+    if(active){ active.style.background=""; }
+  } else if (e.key === "ArrowUp") {
+    e.preventDefault();
+    if(active) active.classList.remove("hovered");
+    var prev = items[Math.max(idx-1, 0)];
+    if(prev){ prev.classList.add("hovered"); prev.style.background="rgba(0,136,255,0.18)"; }
+    if(active){ active.style.background=""; }
+  } else if (e.key === "Enter") {
+    if (active) active.click();
+    else if (document.activeElement && document.activeElement.id === "map-search-input") searchMapPlace();
+  } else if (e.key === "Escape") {
+    hideSuggestions();
+  }
+});
+
+// TRAVEL MAP
+var trMap=null, srcMarker=null, dstMarker=null, routeLine=null;
+var srcCoords=null, dstCoords=null, mapClickState=0;
+
+function initTravelMap(){
+  if(trMap){trMap.invalidateSize();return;}
+  trMap=L.map("tr-map",{zoomControl:true,attributionControl:false}).setView([10.9,79.4],11);
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{maxZoom:19,attribution:""}).addTo(trMap);
+  var srcIcon=L.divIcon({html:"<div style='background:#00ff88;width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 8px #00ff88'></div>",iconSize:[14,14],iconAnchor:[7,7],className:""});
+  var dstIcon=L.divIcon({html:"<div style='background:#ff3366;width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 8px #ff3366'></div>",iconSize:[14,14],iconAnchor:[7,7],className:""});
+  trMap.on("click",function(e){
+    var lat=e.latlng.lat.toFixed(6), lng=e.latlng.lng.toFixed(6);
+    if(mapClickState===0){
+      if(srcMarker)trMap.removeLayer(srcMarker);
+      srcMarker=L.marker([lat,lng],{icon:srcIcon}).addTo(trMap);
+      srcCoords={lat:parseFloat(lat),lon:parseFloat(lng)};
+      srcMarker.bindPopup("<b style='color:#00ff88'>SOURCE</b><br>"+lat+", "+lng).openPopup();
+      document.getElementById("src-coords").textContent=lat+", "+lng;
+      reverseGeocode(lat,lng,"src-label","tr-src");
+      mapClickState=1;
+    } else if(mapClickState===1){
+      if(dstMarker)trMap.removeLayer(dstMarker);
+      dstMarker=L.marker([lat,lng],{icon:dstIcon}).addTo(trMap);
+      dstCoords={lat:parseFloat(lat),lon:parseFloat(lng)};
+      dstMarker.bindPopup("<b style='color:#ff3366'>DESTINATION</b><br>"+lat+", "+lng).openPopup();
+      document.getElementById("dst-coords").textContent=lat+", "+lng;
+      reverseGeocode(lat,lng,"dst-label","tr-dest");
+      if(routeLine)trMap.removeLayer(routeLine);
+      routeLine=L.polyline([[srcCoords.lat,srcCoords.lon],[lat,lng]],{color:"#0088ff",weight:2,dashArray:"6,6",opacity:0.7}).addTo(trMap);
+      trMap.fitBounds(routeLine.getBounds(),{padding:[30,30]});
+      mapClickState=2;
+    } else {
+      if(srcMarker){trMap.removeLayer(srcMarker);srcMarker=null;}
+      if(dstMarker){trMap.removeLayer(dstMarker);dstMarker=null;}
+      if(routeLine){trMap.removeLayer(routeLine);routeLine=null;}
+      srcCoords=null;dstCoords=null;mapClickState=0;
+      document.getElementById("src-label").textContent="Not set — click on map";
+      document.getElementById("dst-label").textContent="Not set — click on map";
+      document.getElementById("src-coords").textContent="—";
+      document.getElementById("dst-coords").textContent="—";
+      document.getElementById("tr-src").value="";
+      document.getElementById("tr-dest").value="";
+    }
+  });
+}
+
+async function reverseGeocode(lat,lng,labelId,inputId){
+  try{
+    var r=await fetch("https://nominatim.openstreetmap.org/reverse?lat="+lat+"&lon="+lng+"&format=json");
+    var d=await r.json();
+    var name=d.display_name||lat+", "+lng;
+    var parts=[];
+    if(d.address){
+      if(d.address.neighbourhood||d.address.suburb||d.address.village||d.address.hamlet)
+        parts.push(d.address.neighbourhood||d.address.suburb||d.address.village||d.address.hamlet);
+      if(d.address.city||d.address.town||d.address.county)
+        parts.push(d.address.city||d.address.town||d.address.county);
+      if(d.address.state) parts.push(d.address.state);
+    }
+    var shortName=parts.length>0?parts.join(", "):name.split(",").slice(0,3).join(",").trim();
+    document.getElementById(labelId).textContent=shortName;
+    document.getElementById(inputId).value=shortName;
+  }catch(e){
+    document.getElementById(labelId).textContent=lat+", "+lng;
+    document.getElementById(inputId).value=lat+", "+lng;
+  }
+}
+
+function initDatePickers(){
+  var today=new Date().toISOString().slice(0,10);
+  document.getElementById("tr-start-date").min=today;
+  document.getElementById("tr-end-date").min=today;
+  document.getElementById("tr-start-date").value=today;
+  var tomorrow=new Date();tomorrow.setDate(tomorrow.getDate()+1);
+  document.getElementById("tr-end-date").value=tomorrow.toISOString().slice(0,10);
+}
+
+// DEVICE FINGERPRINT
+function getFingerprint(){
+  var ua=navigator.userAgent;
+  var os="Unknown";
+  if(ua.includes("Windows"))os="Windows";
+  else if(ua.includes("Mac"))os="MacOS";
+  else if(ua.includes("Linux"))os="Linux";
+  else if(ua.includes("Android"))os="Android";
+  else if(ua.includes("iPhone")||ua.includes("iPad"))os="iOS";
+  var br="Unknown";
+  if(ua.includes("Firefox"))br="Firefox/"+(ua.match(/Firefox\/([\d.]+)/)||["","?"])[1];
+  else if(ua.includes("Edg"))br="Edge/"+(ua.match(/Edg\/([\d.]+)/)||["","?"])[1];
+  else if(ua.includes("Chrome"))br="Chrome/"+(ua.match(/Chrome\/([\d.]+)/)||["","?"])[1];
+  else if(ua.includes("Safari"))br="Safari/"+(ua.match(/Version\/([\d.]+)/)||["","?"])[1];
+  return{os:os,browser:br,screen:screen.width+"x"+screen.height,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,ua:ua.substring(0,120)};
+}
+
+// POLLING FALLBACK
+setInterval(function(){
+  var ap=document.querySelector(".panel.active");
+  if(!ap)return;
+  if(ap.id==="panel-files")loadFiles();
+  if(ap.id==="panel-auditlogs")loadAuditLogs();
+  if(ap.id==="panel-compliance"){ compRunSecCheck(); compRenderLogs(); }
+},5000);
+
+
+/* ════════════════════════════════════════════
+   INTERNAL MAIL SYSTEM — GMAIL-STYLE JS
+   Inbox / Starred / Sent · Threads · Reply · Reply-All · Forward · Star · Delete · Search
+════════════════════════════════════════════ */
+
+/* ── nav item styles injected once ── */
+(function(){
+  var s = document.createElement('style');
+  s.textContent = `
+    .em-nav-item{display:flex;align-items:center;gap:9px;padding:7px 16px;cursor:pointer;
+      font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;color:var(--muted);
+      border-radius:0 20px 20px 0;margin-right:8px;transition:all .13s;user-select:none;}
+    .em-nav-item:hover{background:rgba(0,255,136,0.06);color:var(--text);}
+    .em-nav-item.active{background:rgba(0,255,136,0.12);color:var(--green);}
+    .em-nav-item i{width:16px;text-align:center;font-size:13px;}
+    .em-row{display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;
+      border-bottom:1px solid rgba(26,26,46,0.5);transition:background .12s;}
+    .em-row:hover{background:rgba(0,136,255,0.05);}
+    .em-row.unread{background:rgba(0,255,136,0.03);}
+    .em-row .em-star{color:var(--muted);font-size:14px;flex-shrink:0;cursor:pointer;transition:color .15s;padding:2px 4px;}
+    .em-row .em-star.on{color:var(--yellow);}
+    .em-row .em-from{font-family:'Share Tech Mono',monospace;font-size:11px;width:160px;
+      flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .em-row.unread .em-from{color:#fff;font-weight:700;}
+    .em-row .em-subj{flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .em-row.unread .em-subj{color:#fff;font-weight:700;}
+    .em-row .em-preview{color:var(--muted);font-size:12px;margin-left:6px;}
+    .em-row .em-date{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);
+      flex-shrink:0;text-align:right;white-space:nowrap;}
+    .em-row.unread .em-date{color:var(--green);}
+    .em-msg-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+    .em-msg-hdr{padding:12px 16px;display:flex;align-items:flex-start;gap:10px;cursor:pointer;
+      border-bottom:1px solid transparent;transition:background .12s;}
+    .em-msg-hdr:hover{background:rgba(0,136,255,0.04);}
+    .em-msg-hdr.expanded{border-bottom:1px solid var(--border);}
+    .em-avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;
+      justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;font-family:'Share Tech Mono',monospace;}
+    .em-msg-body-wrap{padding:14px 16px;font-size:13px;color:var(--text);line-height:1.8;white-space:pre-wrap;}
+    .em-msg-actions{padding:10px 16px;display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid var(--border);}
+    .em-act-btn{background:transparent;border:1px solid var(--border);color:var(--muted);
+      padding:5px 14px;border-radius:6px;cursor:pointer;font-family:'Share Tech Mono',monospace;
+      font-size:11px;letter-spacing:1px;display:flex;align-items:center;gap:6px;transition:all .15s;}
+    .em-act-btn:hover{border-color:rgba(0,136,255,0.5);color:var(--blue);background:rgba(0,136,255,0.06);}
+    .em-act-btn.del:hover{border-color:rgba(255,51,102,0.5);color:var(--red);background:rgba(255,51,102,0.06);}
+    .em-act-btn.star-on{border-color:rgba(255,204,0,0.4);color:var(--yellow);}
+    .em-fwd-quote{background:rgba(0,136,255,0.05);border-left:3px solid var(--blue);
+      padding:8px 12px;margin-top:8px;font-size:12px;color:var(--muted);white-space:pre-wrap;
+      border-radius:0 6px 6px 0;line-height:1.7;}
+  `;
+  document.head.appendChild(s);
+})();
+
+// ── State ──────────────────────────────────────────────────────────────────
+var emState = {
+  view:        'inbox',    // inbox | starred | sent
+  userCache:   null,
+  currentThread: null,     // thread_id currently open
+  currentMsgs:   [],       // messages in open thread
+  replyTo:     [],         // reply recipient tags
+  composeToR:  [],         // compose recipient tags
+  searchQ:     '',
+  _searchTimer: null
+};
+
+// ── Load users cache ───────────────────────────────────────────────────────
+async function emLoadMailUsers() {
+  if (emState.userCache) return;
+  try {
+    var r = await apiFetch('/api/mail/users');
+    if (r && r.ok) {
+      var data = await r.json();
+      emState.userCache = (data || []).map(function(u) {
+        return { name: u.name || '', email: (u.email || '').toLowerCase() };
+      });
+    }
+  } catch(e) { emState.userCache = []; }
+}
+
+// ── Switch sidebar view ────────────────────────────────────────────────────
+function emSwitchView(view) {
+  emState.view = view;
+  ['inbox','starred','sent'].forEach(function(v) {
+    var el = document.getElementById('emNav-' + v);
+    if (el) el.classList.toggle('active', v === view);
+  });
+  emCloseThread();
+  emLoadView();
+}
+
+function emRefreshView() { emLoadView(); }
+
+async function emLoadView() {
+  var list = document.getElementById('em-list');
+  if (!list) return;
+  list.innerHTML = '<div style="padding:32px;text-align:center;color:var(--muted);font-family:\'Share Tech Mono\',monospace;font-size:12px;">Loading…</div>';
+
+  var q   = emState.searchQ ? '?q=' + encodeURIComponent(emState.searchQ) : '';
+  var url = emState.view === 'inbox'   ? '/api/mail/inbox'   + q
+          : emState.view === 'starred' ? '/api/mail/starred' + q
+          :                              '/api/mail/sent'    + q;
+  try {
+    var r    = await apiFetch(url);
+    var msgs = await r.json();
+    emRenderList(msgs);
+    if (emState.view === 'inbox') {
+      emUpdateUnreadBadge(msgs.filter(function(m){ return !m.read; }).length);
+    }
+  } catch(e) {
+    list.innerHTML = '<div style="padding:32px;text-align:center;color:var(--red);font-family:\'Share Tech Mono\',monospace;font-size:12px;">Failed to load.</div>';
+  }
+}
+
+// ── Render message list ────────────────────────────────────────────────────
+function emRenderList(msgs) {
+  var list = document.getElementById('em-list');
+  if (!msgs.length) {
+    list.innerHTML = '<div style="padding:48px;text-align:center;color:var(--muted);font-family:\'Share Tech Mono\',monospace;font-size:12px;letter-spacing:2px;">NO MESSAGES</div>';
+    return;
+  }
+
+  // Group by thread — show only the latest message per thread
+  var threads = {};
+  msgs.forEach(function(m) {
+    var tid = m.thread_id || m.msg_id;
+    if (!threads[tid] || m.sent_at > threads[tid].sent_at) threads[tid] = m;
+    if (!m.read && threads[tid]) threads[tid]._hasUnread = true;
+  });
+
+  var rows = Object.values(threads);
+  rows.sort(function(a, b) { return b.sent_at > a.sent_at ? 1 : -1; });
+
+  list.innerHTML = rows.map(function(m) {
+    var unread  = !m.read || m._hasUnread;
+    var starred = m.starred;
+    var from    = emState.view === 'sent' ? ('To: ' + (m.to || []).join(', ')) : emShortEmail(m.from_email);
+    var subj    = m.subject || '(no subject)';
+    var preview = (m.body || '').replace(/\n/g, ' ').slice(0, 80);
+    var date    = emFmtDate(m.sent_at);
+    var tid     = m.thread_id || m.msg_id;
+    return '<div class="em-row ' + (unread ? 'unread' : '') + '" data-tid="' + emEscH(tid) + '" data-mid="' + emEscH(m.msg_id) + '">' +
+      '<span class="em-star ' + (starred ? 'on' : '') + '" onclick="emToggleStar(event,\'' + emEscH(m.msg_id) + '\',this)" title="Star">' +
+        '<i class="fas fa-star"></i>' +
+      '</span>' +
+      '<span class="em-from">' + emEscH(from) + '</span>' +
+      '<span class="em-subj" onclick="emOpenThread(\'' + emEscH(tid) + '\')">' + emEscH(subj) +
+        (preview ? '<span class="em-preview">— ' + emEscH(preview) + '</span>' : '') +
+      '</span>' +
+      '<span class="em-date" onclick="emOpenThread(\'' + emEscH(tid) + '\')">' + date + '</span>' +
+      '</div>';
+  }).join('');
+}
+
+// ── Open thread ────────────────────────────────────────────────────────────
+async function emOpenThread(threadId) {
+  emState.currentThread = threadId;
+  document.getElementById('em-list-pane').style.display   = 'none';
+  var tp = document.getElementById('em-thread-pane');
+  tp.style.display = 'flex';
+
+  document.getElementById('em-thread-msgs').innerHTML =
+    '<div style="padding:20px;text-align:center;color:var(--muted);font-family:\'Share Tech Mono\',monospace;font-size:11px;">Loading thread…</div>';
+
+  try {
+    var r    = await apiFetch('/api/mail/thread/' + threadId);
+    var msgs = await r.json();
+    emState.currentMsgs = msgs;
+
+    if (!msgs.length) { emCloseThread(); return; }
+
+    // Mark all unread in thread as read
+    msgs.forEach(function(m) {
+      if (!m.read && m.to && m.to.includes(SESSION_EMAIL.toLowerCase())) {
+        apiFetch('/api/mail/read/' + m.msg_id, { method: 'POST' }).catch(function(){});
+      }
+    });
+
+    // Subject in header
+    document.getElementById('em-thread-subject').textContent = msgs[0].subject || '(no subject)';
+
+    // Thread-level actions
+    var latest = msgs[msgs.length - 1];
+    document.getElementById('em-thread-actions').innerHTML =
+      '<button class="em-act-btn del" onclick="emDeleteThread()" title="Delete thread"><i class="fas fa-trash"></i></button>';
+
+    // Render messages
+    var container = document.getElementById('em-thread-msgs');
+    container.innerHTML = msgs.map(function(m, i) {
+      var isLast    = i === msgs.length - 1;
+      var isMine    = m.from_email === SESSION_EMAIL.toLowerCase();
+      var avatarCol = isMine ? 'background:rgba(0,136,255,0.25);color:var(--blue);' : 'background:rgba(0,255,136,0.18);color:var(--green);';
+      var initials  = emInitials(m.from_email);
+      var fwdBadge  = m.is_forward ? '<span style="font-size:9px;background:rgba(0,136,255,0.15);color:var(--blue);padding:1px 6px;border-radius:4px;margin-left:6px;font-family:\'Share Tech Mono\',monospace;">FWD</span>' : '';
+
+      return '<div class="em-msg-card">' +
+        '<div class="em-msg-hdr' + (isLast ? ' expanded' : '') + '" onclick="emToggleMsgBody(this)">' +
+          '<div class="em-avatar" style="' + avatarCol + '">' + initials + '</div>' +
+          '<div style="flex:1;min-width:0;">' +
+            '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">' +
+              '<span style="font-weight:700;font-size:13px;color:#fff;">' + emEscH(m.from_email) + '</span>' +
+              fwdBadge +
+              '<span style="font-family:\'Share Tech Mono\',monospace;font-size:10px;color:var(--muted);margin-left:auto;white-space:nowrap;">' + m.sent_at + '</span>' +
+            '</div>' +
+            '<div style="font-size:11px;color:var(--muted);font-family:\'Share Tech Mono\',monospace;margin-top:2px;">to ' + emEscH((m.to || []).join(', ')) + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="em-msg-body-wrap" style="' + (!isLast ? 'display:none;' : '') + '">' +
+          emEscH(m.body) +
+        '</div>' +
+        '<div class="em-msg-actions" style="' + (!isLast ? 'display:none;' : '') + '">' +
+          '<button class="em-act-btn" onclick="emStartReply(\'' + m.msg_id + '\',\'' + emEscH(m.from_email) + '\',\'' + emEscH(m.thread_id||m.msg_id) + '\',false)"><i class="fas fa-reply"></i> Reply</button>' +
+          '<button class="em-act-btn" onclick="emStartReplyAll(\'' + m.msg_id + '\',\'' + emEscH(JSON.stringify(m.to||[])) + '\',\'' + emEscH(m.from_email) + '\',\'' + emEscH(m.thread_id||m.msg_id) + '\')"><i class="fas fa-reply-all"></i> Reply All</button>' +
+          '<button class="em-act-btn" onclick="emStartForward(\'' + m.msg_id + '\',\'' + emEscH(m.subject) + '\',\'' + emEscH(m.body.replace(/\'/g,"\\'")) + '\',\'' + emEscH(m.thread_id||m.msg_id) + '\')"><i class="fas fa-share"></i> Forward</button>' +
+          '<button class="em-act-btn ' + (m.starred ? 'star-on' : '') + '" id="emStarBtn-' + m.msg_id + '" onclick="emToggleStarBtn(\'' + m.msg_id + '\',this)"><i class="fas fa-star"></i> ' + (m.starred ? 'Starred' : 'Star') + '</button>' +
+          '<button class="em-act-btn del" onclick="emDeleteMsg(\'' + m.msg_id + '\')"><i class="fas fa-trash"></i> Delete</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    // Pre-fill reply box with sender of last message
+    emStartReply(latest.msg_id, latest.from_email, latest.thread_id || latest.msg_id, false);
+
+    emUpdateUnreadBadge();
+
+  } catch(err) {
+    document.getElementById('em-thread-msgs').innerHTML =
+      '<div style="padding:20px;color:var(--red);font-family:\'Share Tech Mono\',monospace;font-size:12px;">Failed to load thread.</div>';
+  }
+}
+
+function emToggleMsgBody(hdrEl) {
+  var card    = hdrEl.parentElement;
+  var body    = card.querySelector('.em-msg-body-wrap');
+  var actions = card.querySelector('.em-msg-actions');
+  if (!body) return;
+  var isOpen = body.style.display !== 'none';
+  body.style.display    = isOpen ? 'none' : '';
+  if (actions) actions.style.display = isOpen ? 'none' : '';
+  hdrEl.classList.toggle('expanded', !isOpen);
+}
+
+function emCloseThread() {
+  emState.currentThread = null;
+  emState.currentMsgs   = [];
+  document.getElementById('em-thread-pane').style.display  = 'none';
+  document.getElementById('em-list-pane').style.display    = '';
+  emCancelReply();
+}
+
+// ── Reply / Reply-All / Forward ───────────────────────────────────────────
+function emStartReply(msgId, fromEmail, threadId, doNotFocus) {
+  emState.replyTo       = [fromEmail.toLowerCase()];
+  emState._replyMsgId   = msgId;
+  emState._replyThreadId= threadId;
+  emState._replyMode    = 'reply';
+  emState._fwdBody      = null;
+  emRenderReplyTags();
+  var bodyEl = document.getElementById('em-reply-body');
+  if (bodyEl) { bodyEl.value = ''; if (!doNotFocus) bodyEl.focus(); }
+  document.getElementById('em-reply-box').style.display = '';
+}
+
+function emStartReplyAll(msgId, toJson, fromEmail, threadId) {
+  var toArr;
+  try { toArr = JSON.parse(toJson); } catch(e) { toArr = []; }
+  // include original sender + all recipients except self
+  var all = [fromEmail].concat(toArr).map(function(e){ return e.toLowerCase(); });
+  var me  = SESSION_EMAIL.toLowerCase();
+  emState.replyTo        = all.filter(function(e){ return e !== me; }).filter(function(e,i,a){ return a.indexOf(e)===i; });
+  emState._replyMsgId    = msgId;
+  emState._replyThreadId = threadId;
+  emState._replyMode     = 'reply-all';
+  emState._fwdBody       = null;
+  emRenderReplyTags();
+  var bodyEl = document.getElementById('em-reply-body');
+  if (bodyEl) { bodyEl.value = ''; bodyEl.focus(); }
+  document.getElementById('em-reply-box').style.display = '';
+}
+
+function emStartForward(msgId, subject, origBody, threadId) {
+  emState.replyTo        = [];
+  emState._replyMsgId    = msgId;
+  emState._replyThreadId = threadId;
+  emState._replyMode     = 'forward';
+  emState._fwdBody       = origBody;
+  emRenderReplyTags();
+  var bodyEl = document.getElementById('em-reply-body');
+  if (bodyEl) {
+    bodyEl.value = '\n\n---------- Forwarded message ----------\n' + origBody;
+    bodyEl.focus();
+    bodyEl.setSelectionRange(0, 0);
+  }
+  document.getElementById('em-reply-box').style.display = '';
+}
+
+function emCancelReply() {
+  emState.replyTo = [];
+  emRenderReplyTags();
+  var b = document.getElementById('em-reply-body');
+  if (b) b.value = '';
+  var rb = document.getElementById('em-reply-box');
+  if (rb) rb.style.display = 'none';
+}
+
+function emRenderReplyTags() {
+  var box   = document.getElementById('em-reply-toBox');
+  var input = document.getElementById('em-reply-toIn');
+  if (!box || !input) return;
+  var tags = emState.replyTo.map(function(e, i) {
+    return '<span class="tag-t">' + emEscH(e) + '<button onclick="emReplyRmTag(' + i + ')">×</button></span>';
+  }).join('');
+  box.innerHTML = tags;
+  box.appendChild(input);
+}
+
+function emReplyRmTag(i) {
+  emState.replyTo.splice(i, 1);
+  emRenderReplyTags();
+}
+
+async function emReplyHandleTag(e) {
+  if (e.key === 'Enter' || e.key === ',') {
+    e.preventDefault();
+    var val = document.getElementById('em-reply-toIn').value.trim().replace(/,/g,'').toLowerCase();
+    if (!val) return;
+    await emReplyAddTag(val);
+    document.getElementById('em-reply-toIn').value = '';
+  }
+}
+
+async function emReplyBlurTag(e) {
+  var val = document.getElementById('em-reply-toIn').value.trim().replace(/,/g,'').toLowerCase();
+  if (val) { await emReplyAddTag(val); document.getElementById('em-reply-toIn').value = ''; }
+}
+
+async function emReplyAddTag(email) {
+  if (!email || emState.replyTo.includes(email)) return;
+  if (!emState.userCache) await emLoadMailUsers();
+  var found = emState.userCache && emState.userCache.find(function(u){ return u.email === email; });
+  if (!found) {
+    var m = document.getElementById('em-reply-msg');
+    if (m) { m.textContent = 'Not in system: ' + email; m.style.color = 'var(--red)'; setTimeout(function(){ m.textContent=''; }, 4000); }
+    return;
+  }
+  emState.replyTo.push(email);
+  emRenderReplyTags();
+}
+
+async function emSendReply() {
+  var body    = (document.getElementById('em-reply-body').value || '').trim();
+  var btn     = document.getElementById('em-reply-sendBtn');
+  var msgEl   = document.getElementById('em-reply-msg');
+  var isForward = emState._replyMode === 'forward';
+
+  if (!emState.replyTo.length)  { if(msgEl){msgEl.textContent='Add recipient';msgEl.style.color='var(--yellow)';} return; }
+  if (!body)                    { if(msgEl){msgEl.textContent='Write something first';msgEl.style.color='var(--yellow)';} return; }
+
+  // Find subject of thread
+  var subj = '';
+  if (emState.currentMsgs && emState.currentMsgs.length) {
+    subj = emState.currentMsgs[0].subject || '';
+  }
+  if (!isForward && subj && !subj.startsWith('Re: ')) subj = 'Re: ' + subj;
+  if (isForward  && subj && !subj.startsWith('Fwd: ')) subj = 'Fwd: ' + subj;
+
+  btn.disabled = true;
+  if (msgEl) { msgEl.textContent = 'Sending…'; msgEl.style.color = 'var(--green)'; }
+
+  try {
+    var payload = {
+      to:          emState.replyTo,
+      subject:     subj,
+      body:        body,
+      thread_id:   isForward ? null : emState._replyThreadId,
+      reply_to_id: emState._replyMsgId,
+      is_forward:  isForward
+    };
+    var r    = await apiFetch('/api/mail/send', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    var data = await r.json();
+    if (data.success) {
+      if (msgEl) { msgEl.textContent = '✓ Sent'; msgEl.style.color = 'var(--green)'; }
+      document.getElementById('em-reply-body').value = '';
+      emState.replyTo = [];
+      emRenderReplyTags();
+      // Reload thread
+      setTimeout(function(){ emOpenThread(emState.currentThread); }, 400);
+    } else if (data.blocked) {
+      if (msgEl) { msgEl.textContent = '⚠ Blocked: ' + (data.error||'DLP'); msgEl.style.color = 'var(--yellow)'; }
+    } else {
+      if (msgEl) { msgEl.textContent = '✗ ' + (data.error||'Failed'); msgEl.style.color = 'var(--red)'; }
+    }
+  } catch(ex) {
+    if (msgEl) { msgEl.textContent = 'Error: ' + ex.message; msgEl.style.color = 'var(--red)'; }
+  } finally { btn.disabled = false; }
+}
+
+// ── Star toggle ────────────────────────────────────────────────────────────
+async function emToggleStar(event, msgId, iconEl) {
+  event.stopPropagation();
+  var r    = await apiFetch('/api/mail/star/' + msgId, { method: 'POST' });
+  var data = await r.json();
+  iconEl.classList.toggle('on', data.starred);
+}
+
+async function emToggleStarBtn(msgId, btnEl) {
+  var r    = await apiFetch('/api/mail/star/' + msgId, { method: 'POST' });
+  var data = await r.json();
+  btnEl.classList.toggle('star-on', data.starred);
+  btnEl.innerHTML = '<i class="fas fa-star"></i> ' + (data.starred ? 'Starred' : 'Star');
+}
+
+// ── Delete ─────────────────────────────────────────────────────────────────
+async function emDeleteMsg(msgId) {
+  await apiFetch('/api/mail/delete/' + msgId, { method: 'POST' });
+  emCloseThread();
+  emLoadView();
+}
+
+async function emDeleteThread() {
+  for (var i = 0; i < emState.currentMsgs.length; i++) {
+    await apiFetch('/api/mail/delete/' + emState.currentMsgs[i].msg_id, { method: 'POST' });
+  }
+  emCloseThread();
+  emLoadView();
+}
+
+// ── Compose modal ──────────────────────────────────────────────────────────
+function emOpenCompose(opts) {
+  opts = opts || {};
+  emState.composeToR = opts.to ? [opts.to] : [];
+  emRenderComposeTags();
+  var sub  = document.getElementById('em-sub');
+  var body = document.getElementById('em-body');
+  var err  = document.getElementById('em-toErr');
+  if (sub)  sub.value  = opts.subject || '';
+  if (body) body.value = opts.body    || '';
+  if (err)  err.textContent = '';
+  document.getElementById('em-compose-modal').style.display = '';
+  if (!emState.composeToR.length) document.getElementById('em-toIn').focus();
+  else if (sub) sub.focus();
+  emLoadMailUsers();
+}
+
+function emCloseCompose() {
+  document.getElementById('em-compose-modal').style.display = 'none';
+  emClearCompose();
+}
+
+function emMinimizeCompose() {
+  var body = document.getElementById('em-compose-body');
+  var isMin = body.style.display === 'none';
+  body.style.display = isMin ? '' : 'none';
+}
+
+function emClearCompose() {
+  emState.composeToR = [];
+  emRenderComposeTags();
+  var sub = document.getElementById('em-sub');
+  var bod = document.getElementById('em-body');
+  var err = document.getElementById('em-toErr');
+  if (sub) sub.value = '';
+  if (bod) bod.value = '';
+  if (err) err.textContent = '';
+}
+
+function emClear() { emCloseCompose(); }
+
+function emRenderComposeTags() {
+  var box   = document.getElementById('em-toBox');
+  var input = document.getElementById('em-toIn');
+  if (!box || !input) return;
+  var tags = emState.composeToR.map(function(e, i) {
+    return '<span class="tag-t">' + emEscH(e) + '<button onclick="emComposeRmTag(' + i + ')">×</button></span>';
+  }).join('');
+  box.innerHTML = tags;
+  box.appendChild(input);
+}
+
+function emComposeRmTag(i) {
+  emState.composeToR.splice(i, 1);
+  emRenderComposeTags();
+}
+
+async function emHandleTag(e) {
+  if (e.key === 'Enter' || e.key === ',') {
+    e.preventDefault();
+    var val = document.getElementById('em-toIn').value.trim().replace(/,/g,'').toLowerCase();
+    if (!val) return;
+    await emComposeAddTag(val);
+    document.getElementById('em-toIn').value = '';
+  }
+  if (e.key === 'Backspace' && !document.getElementById('em-toIn').value && emState.composeToR.length) {
+    emComposeRmTag(emState.composeToR.length - 1);
+  }
+}
+
+async function emBlurTag(e) {
+  var val = document.getElementById('em-toIn').value.trim().replace(/,/g,'').toLowerCase();
+  if (val) { await emComposeAddTag(val); document.getElementById('em-toIn').value = ''; }
+}
+
+async function emComposeAddTag(email) {
+  var errEl = document.getElementById('em-toErr');
+  if (errEl) errEl.textContent = '';
+  if (!email) return;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (errEl) errEl.textContent = 'Invalid email: ' + email; return;
+  }
+  if (emState.composeToR.includes(email)) return;
+  if (!emState.userCache) await emLoadMailUsers();
+  var found = emState.userCache && emState.userCache.find(function(u){ return u.email === email; });
+  if (!found) {
+    if (errEl) errEl.textContent = 'Not registered in system: ' + email; return;
+  }
+  emState.composeToR.push(email);
+  emRenderComposeTags();
+}
+
+async function emSend() {
+  var subject = (document.getElementById('em-sub').value  || '').trim();
+  var body    = (document.getElementById('em-body').value || '').trim();
+  var btn     = document.getElementById('em-sendBtn');
+
+  if (!emState.composeToR.length) { emShowMsg('Add at least one recipient', 'warn'); return; }
+  if (!subject)                   { emShowMsg('Subject is required', 'warn'); return; }
+  if (!body)                      { emShowMsg('Message body is required', 'warn'); return; }
+
+  btn.disabled = true;
+  emShowMsg('Sending…', 'ok');
+
+  try {
+    var r    = await apiFetch('/api/mail/send', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ to: emState.composeToR, subject: subject, body: body })
+    });
+    var data = await r.json();
+    if (data.success) {
+      emShowMsg('✓ Sent to ' + emState.composeToR.length + ' recipient(s)', 'ok');
+      setTimeout(emCloseCompose, 1200);
+      emLoadView();
+    } else if (data.blocked) {
+      emShowMsg('⚠ Blocked: ' + (data.error || 'DLP violation'), 'warn');
+    } else {
+      emShowMsg('✗ ' + (data.error || 'Failed'), 'err');
+    }
+  } catch(ex) { emShowMsg('Error: ' + ex.message, 'err'); }
+  finally { btn.disabled = false; }
+}
+
+function emShowMsg(txt, type) {
+  var el = document.getElementById('em-msg');
+  if (!el) return;
+  var colors = { ok: 'var(--green)', err: 'var(--red)', warn: 'var(--yellow)' };
+  el.textContent = txt;
+  el.style.color = colors[type] || 'var(--text)';
+  clearTimeout(el._t);
+  el._t = setTimeout(function(){ el.textContent = ''; }, 6000);
+}
+
+// ── Search ─────────────────────────────────────────────────────────────────
+function emSearchDebounce(val) {
+  clearTimeout(emState._searchTimer);
+  emState._searchTimer = setTimeout(function(){ emState.searchQ = val; emLoadView(); }, 400);
+}
+
+function emDoSearch() {
+  emState.searchQ = (document.getElementById('em-search').value || '').trim();
+  emLoadView();
+}
+
+// ── Unread badge ──────────────────────────────────────────────────────────
+function emUpdateUnreadBadge(count) {
+  var badge = document.getElementById('emUnreadBadge');
+  if (!badge) return;
+  if (count == null) {
+    apiFetch('/api/mail/unread-count').then(function(r){ return r.json(); }).then(function(d){
+      var n = d.unread || 0;
+      badge.textContent = n; badge.style.display = n ? 'inline' : 'none';
+      var sideNav = document.querySelector('[data-p="email"] .nav-badge-dlp');
+      if (sideNav) { sideNav.textContent = n; sideNav.style.display = n ? 'inline' : 'none'; }
+    }).catch(function(){});
+    return;
+  }
+  badge.textContent = count; badge.style.display = count ? 'inline' : 'none';
+}
+
+// ── Socket.IO real-time ────────────────────────────────────────────────────
+socket.on('new_mail', function(data) {
+  emUpdateUnreadBadge();
+  if (emState.view === 'inbox' && !emState.currentThread) emLoadView();
+  // Toast
+  var t = document.getElementById('emToastEl');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'emToastEl';
+    t.style.cssText = 'position:fixed;bottom:28px;right:28px;z-index:9999;background:var(--surface);' +
+      'border:1px solid var(--green);color:var(--green);font-family:\'Share Tech Mono\',monospace;' +
+      'font-size:12px;padding:12px 18px;border-radius:8px;max-width:320px;' +
+      'box-shadow:0 4px 20px rgba(0,255,136,0.15);transition:opacity .4s;cursor:pointer;';
+    t.onclick = function(){ emSwitchView('inbox'); t.style.opacity='0'; };
+    document.body.appendChild(t);
+  }
+  t.textContent = '📬 ' + (data.from_name || data.from_email) + ': ' + (data.subject || '');
+  t.style.opacity = '1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(function(){ t.style.opacity = '0'; }, 5000);
+});
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function emEscH(s) { var d=document.createElement('div');d.textContent=String(s);return d.innerHTML; }
+function emInitials(email) { return (email||'?')[0].toUpperCase(); }
+function emShortEmail(email) { return (email||'').split('@')[0]; }
+function emFmtDate(dt) {
+  if (!dt) return '';
+  var d = new Date(dt.replace(' ', 'T') + 'Z');
+  if (isNaN(d)) return dt;
+  var now  = new Date();
+  var diff = now - d;
+  if (diff < 86400000 && now.getDate() === d.getDate()) {
+    return d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  }
+  if (diff < 604800000) {
+    return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
+  }
+  return (d.getMonth()+1) + '/' + d.getDate() + '/' + String(d.getFullYear()).slice(2);
+}
+
+// ── Poll + Init ────────────────────────────────────────────────────────────
+setInterval(function(){ emUpdateUnreadBadge(); }, 15000);
+emLoadMailUsers();
+emUpdateUnreadBadge();
+
+
+/* ════════════════════════════════════════════
+   FM PICKER — for Cloud Upload (picks from virtual FS)
+════════════════════════════════════════════ */
+var clPickerSelected = {}; // {name: {fmNode, path}}
+var clPickerCwd = '';
+
+function clOpenFMPicker() {
+  clPickerSelected = {};
+  clPickerCwd = '';
+  clRenderPickerContent();
+  clRenderPickerSelected();
+  document.getElementById('cl-fm-picker-modal').style.display = 'flex';
+}
+function clCloseFMPicker() {
+  document.getElementById('cl-fm-picker-modal').style.display = 'none';
+}
+function clPickerNavTo(path) {
+  clPickerCwd = path;
+  clRenderPickerContent();
+}
+function clRenderPickerContent() {
+  var node = fmGetNode(clPickerCwd);
+  var el   = document.getElementById('cl-picker-content');
+  if (!node || node.type !== 'folder') { el.innerHTML = '<div style="color:var(--muted);font-family:\'Share Tech Mono\',monospace;font-size:11px;padding:20px;text-align:center;">Empty</div>'; return; }
+  var keys = Object.keys(node.children || {}).sort(function(a,b){
+    var ta=node.children[a].type, tb=node.children[b].type;
+    if(ta===tb) return a.localeCompare(b);
+    return ta==='folder'?-1:1;
+  });
+  if (!keys.length) { el.innerHTML = '<div style="color:var(--muted);font-family:\'Share Tech Mono\',monospace;font-size:11px;padding:20px;text-align:center;">Empty folder</div>'; return; }
+  el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;">' +
+    keys.map(function(k) {
+      var item = node.children[k];
+      var isFolder = item.type === 'folder';
+      var isSelected = !!clPickerSelected[k];
+      var icon = isFolder ? '📁' : fIconByName(k);
+      var selStyle = isSelected ? 'border-color:var(--green);background:rgba(0,255,136,0.12);' : '';
+      return '<div style="border:1px solid var(--border);border-radius:8px;padding:10px 6px;text-align:center;cursor:pointer;transition:all .15s;' + selStyle + '" ' +
+        'onclick="clPickerClick(\'' + escQ(k) + '\',' + isFolder + ')" ' +
+        'ondblclick="' + (isFolder ? 'clPickerNavTo(\'' + escQ(clPickerCwd ? clPickerCwd+'/'+k : k) + '\')' : '') + '">' +
+        '<div style="font-size:24px;margin-bottom:4px;">' + icon + '</div>' +
+        '<div style="font-family:\'Share Tech Mono\',monospace;font-size:9px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHtml(k) + '</div>' +
+        (isFolder ? '' : '<div style="font-family:\'Share Tech Mono\',monospace;font-size:8px;color:var(--muted);">' + fmtBytes(item.size||0) + '</div>') +
+        '</div>';
+    }).join('') + '</div>';
+}
+function clPickerClick(name, isFolder) {
+  if (isFolder) {
+    clPickerNavTo(clPickerCwd ? clPickerCwd+'/'+name : name);
+    return;
+  }
+  var node = fmGetNode(clPickerCwd);
+  if (!node || !node.children || !node.children[name]) return;
+  if (clPickerSelected[name]) {
+    delete clPickerSelected[name];
+  } else {
+    if (Object.keys(clPickerSelected).length >= 2) {
+      alert('Maximum 2 files allowed for cloud upload.');
+      return;
+    }
+    clPickerSelected[name] = { fmNode: node.children[name], path: clPickerCwd };
+  }
+  clRenderPickerContent();
+  clRenderPickerSelected();
+}
+function clRenderPickerSelected() {
+  var keys  = Object.keys(clPickerSelected);
+  var count = document.getElementById('cl-picker-count');
+  var list  = document.getElementById('cl-picker-selected-list');
+  if (count) count.textContent = keys.length;
+  if (!list) return;
+  list.innerHTML = keys.map(function(k) {
+    return '<span style="background:rgba(0,255,136,0.12);border:1px solid rgba(0,255,136,0.3);color:var(--green);padding:3px 10px;border-radius:100px;font-family:\'Share Tech Mono\',monospace;font-size:10px;display:flex;align-items:center;gap:4px;">' +
+      fIconByName(k) + ' ' + escHtml(k) +
+      '<span onclick="clPickerRemove(\'' + escQ(k) + '\')" style="cursor:pointer;margin-left:4px;color:var(--red);font-size:13px;line-height:1;">×</span></span>';
+  }).join('') || '<span style="font-family:\'Share Tech Mono\',monospace;font-size:10px;color:var(--muted);">None selected</span>';
+}
+function clPickerRemove(name) {
+  delete clPickerSelected[name];
+  clRenderPickerContent();
+  clRenderPickerSelected();
+}
+function clConfirmFMPick() {
+  var keys = Object.keys(clPickerSelected);
+  if (!keys.length) { alert('Select at least one file.'); return; }
+  // Convert FM nodes to File-like objects for DLP pipeline
+  clFiles = keys.map(function(k) {
+    var n = clPickerSelected[k].fmNode;
+    // Build a pseudo-file object that clUpload can use
+    return { name: k, size: n.size||0, type: n.mime||'application/octet-stream', _fmNode: n, _fromFM: true };
+  });
+  var hint = document.getElementById('cl-fmPickerHint');
+  if (hint) hint.textContent = keys.join(', ');
+  clCloseFMPicker();
+  clRenderFileList();
+  clRunDLP();
+}
+
+/* ════════════════════════════════════════════
+   CLOUD UPLOAD — JS
+════════════════════════════════════════════ */
+var clFiles = [];
+
+function clCheckFolder(){
+  var fEl=document.getElementById('cl-folder');
+  if(!fEl) return;
+  var f=fEl.value;
+  var warn=document.getElementById('cl-folderWarn');
+  if(warn) warn.style.display=CLOUD_RESTRICTED.includes(f)?'flex':'none';
+}
+function clHandleFiles(input){
+  clFiles=Array.from(input.files);
+  clRenderFileList();
+  clRunDLP();
+}
+function clRenderFileList(){
+  var el=document.getElementById('cl-fileList');
+  if(!el) return;
+  if(!clFiles.length){ el.innerHTML=''; return; }
+  el.innerHTML='<div style="border:1px solid var(--border);border-radius:var(--r);overflow:hidden;">' +
+    clFiles.map(function(f,i){
+      var ext=f.name.split('.').pop().toLowerCase();
+      var bad=CLOUD_BLOCKED_EXT.includes(ext)||f.size>10*1024*1024;
+      return '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;'+(i<clFiles.length-1?'border-bottom:1px solid rgba(26,26,46,.5);':'')+'">'+
+        '<span style="font-size:16px;">📄</span>'+
+        '<div style="flex:1;min-width:0;"><div style="font-size:11px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+emEscH(f.name)+'</div>'+
+        '<div style="font-size:9px;color:var(--muted);font-family:var(--mono);">'+emFmtB(f.size)+' · .'+ext.toUpperCase()+'</div></div>'+
+        '<span class="pill '+(bad?'pill-err':'pill-ok')+'">'+(bad?'⚠ Issue':'✓ OK')+'</span></div>';
+    }).join('')+'</div>';
+}
+function clRunDLP(){
+  var folder=document.getElementById('cl-folder').value;
+  var issues=[];
+  if(clFiles.length>2) issues.push({sev:'HIGH',msg:clFiles.length+' files exceeds 2-file limit'});
+  if(CLOUD_RESTRICTED.includes(folder)) issues.push({sev:'MEDIUM',msg:'Restricted folder — manager approval required'});
+  clFiles.forEach(function(f){
+    var ext=f.name.split('.').pop().toLowerCase();
+    if(CLOUD_BLOCKED_EXT.includes(ext)) issues.push({sev:'CRITICAL',msg:'Blocked type .'+ext+': "'+f.name+'"'});
+    if(f.size>10*1024*1024) issues.push({sev:'HIGH',msg:'Oversized ('+emFmtB(f.size)+', limit 10MB): '+f.name});
+  });
+  var el=document.getElementById('cl-dlpRes');
+  if(!el) return;
+  if(issues.length){
+    el.innerHTML='<div class="al al-warning"><i class="fas fa-triangle-exclamation"></i><div><strong>'+issues.length+' issue(s):</strong><ul style="margin:4px 0 0 13px;font-size:10px;">'+
+      issues.map(function(i){return'<li><span class="pill '+(i.sev==='CRITICAL'?'pill-err':'pill-warn')+'">'+i.sev+'</span> '+i.msg+'</li>';}).join('')+'</ul></div></div>';
+  } else {
+    el.innerHTML='<div class="al al-success"><i class="fas fa-circle-check"></i> DLP pre-scan passed — ready to upload.</div>';
+  }
+}
+async function clUpload(){
+  var folder=document.getElementById('cl-folder').value;
+  var msgEl=document.getElementById('cl-msg');
+  function clMsg(t,c){ msgEl.textContent=t; msgEl.className='msg '+c; msgEl.style.display='block'; setTimeout(function(){msgEl.style.display='none';},6000); }
+  if(!clFiles.length){ clMsg('No files selected — pick from File Manager','warn'); return; }
+  if(clFiles.length>2){ clMsg('Max 2 files allowed','err'); return; }
+  var blk=clFiles.filter(function(f){return CLOUD_BLOCKED_EXT.includes(f.name.split('.').pop().toLowerCase());});
+  if(blk.length){ clMsg('Blocked file types: '+blk.map(function(f){return f.name;}).join(', '),'err'); return; }
+  var btn=document.getElementById('cl-uploadBtn'); btn.disabled=true;
+  var pw=document.getElementById('cl-prog');
+  var bar=document.getElementById('cl-progBar'); var pct=document.getElementById('cl-progPct'); var st=document.getElementById('cl-progSt');
+  pw.style.display='block'; bar.style.width='10%'; pct.textContent='10%'; st.textContent='Preparing…';
+  try {
+    var fd=new FormData();
+    // Attach FM-sourced files by sending file_ids to backend; OS files go as blobs
+    var fmIds=[];
+    for(var i=0;i<clFiles.length;i++){
+      var f=clFiles[i];
+      if(f._fromFM && f._fmNode && f._fmNode.fid){
+        fmIds.push({name:f.name, fid:f._fmNode.fid});
+      } else if(!f._fromFM) {
+        fd.append('files',f);
+      }
+    }
+    fd.append('folder',folder);
+    fd.append('vfs_files', JSON.stringify(fmIds));
+    bar.style.width='40%'; pct.textContent='40%'; st.textContent='Running DLP scan…';
+    var r=await apiFetch('/upload_to_drive',{method:'POST',body:fd});
+    if(!r){ clMsg('Network error','err'); pw.style.display='none'; btn.disabled=false; return; }
+    var data=await r.json();
+    bar.style.width='100%'; pct.textContent='100%';
+    if(data.success){
+      st.textContent='Complete!'; clMsg('Uploaded '+clFiles.length+' file(s) to '+folder,'ok');
+      clFiles=[];
+      var hint=document.getElementById('cl-fmPickerHint'); if(hint) hint.textContent='No files selected';
+      document.getElementById('cl-fileList').innerHTML=''; document.getElementById('cl-dlpRes').innerHTML='';
+    } else if(data.requires_approval){
+      st.textContent='Awaiting approval…'; clMsg('Approval required — ticket raised (48hr SLA)','warn');
+    } else {
+      st.textContent='Blocked.';
+      clMsg('BLOCKED: '+((data.alerts||[]).map(function(a){return a.message;}).join('; ')||data.error||'DLP violation'),'err');
+    }
+    setTimeout(function(){pw.style.display='none'; bar.style.width='0%';},2000);
+  } catch(ex){ clMsg('Error: '+ex.message,'err'); pw.style.display='none'; }
+  finally { btn.disabled=false; }
+}
+
+/* ════════════════════════════════════════════
+   COMPLIANCE — JS
+════════════════════════════════════════════ */
+var compState = { gdprReqs:[], disputes:[], logsPage:1, logDebounce:null };
+
+async function compRunSecCheck(){
+  compRenderSecLocal();
+  var r=await apiFetch('/api/security_health');
+  if(!r) return;
+  var data=await r.json();
+  var score=data.compliance_score||80;
+  var scoreEl=document.getElementById('comp-score');
+  if(scoreEl) scoreEl.textContent=score+'%';
+  var ovEl=document.getElementById('comp-overallVal');
+  if(ovEl){ ovEl.textContent=data.status==='ok'?'SAFE':'DEGRADED'; ovEl.style.color=data.status==='ok'?'var(--green)':'var(--yellow)'; }
+  var hg=document.getElementById('comp-healthGrid');
+  if(hg&&data.controls){
+    var items=Object.values(data.controls).map(function(c){
+      return {ok:c.status==='ok',i:c.status==='ok'?'fa-check-circle':'fa-triangle-exclamation',l:c.label,d:c.status==='ok'?'Operational':'Degraded — contact IT Security'};
+    });
+    items.push({ok:data.recent_violations===0,i:data.recent_violations===0?'fa-check-circle':'fa-triangle-exclamation',l:'Violation Record (7d)',d:data.recent_violations===0?'Clean':data.recent_violations+' violation(s)'});
+    hg.innerHTML=items.map(function(c){
+      return '<div class="sec-item-t '+(c.ok?'ok':'warn')+'"><i class="fas '+c.i+'"></i><div><div class="sec-lbl-t">'+c.l+'</div><div class="sec-desc-t">'+c.d+'</div></div></div>';
+    }).join('');
+  }
+}
+
+function compRenderSecLocal(){
+  var ctrl=[
+    {cls:'ok',i:'fa-check-circle',l:'DLP Engine',d:'Regex-based PII scanning on all emails, files, uploads.'},
+    {cls:'ok',i:'fa-droplet',l:'File Watermarking',d:'Name + timestamp embedded on all viewed files.'},
+    {cls:'ok',i:'fa-ban',l:'Copy Protection',d:'Clipboard blocked in file viewer — every attempt is logged.'},
+    {cls:'ok',i:'fa-print',l:'Print Blocking',d:'Browser print dialog intercepted and logged.'},
+    {cls:navigator.mediaDevices?'ok':'warn',i:'fa-video',l:'Webcam Monitoring',d:navigator.mediaDevices?'Activates when file viewer opens.':'Camera unavailable.'},
+    {cls:'ok',i:'fa-user-shield',l:'Role-Based Privileges',d:'Access is enforced based on your assigned role.'},
+    {cls:'ok',i:'fa-timeline',l:'Server-Side Audit Logging',d:'All events logged to database with integrity hashing.'},
+    {cls:'bad',i:'fa-camera',l:'Screenshot Detection',d:'NOT POSSIBLE — JavaScript cannot detect OS-level screenshots. We are transparent about this.'},
+    {cls:'ok',i:'fa-clock',l:'Session Timeout (5min)',d:'Auto-expires after 5 minutes of inactivity.'},
+    {cls:'ok',i:'fa-usb',l:'USB Monitoring',d:'USB device detection active — violations reported.'},
+    {cls:'ok',i:'fa-flag',l:'Dispute Centre',d:'All violations contestable — human review within 5 business days.'},
+  ];
+  var g=document.getElementById('comp-secGrid');
+  if(g) g.innerHTML=ctrl.map(function(c){
+    return '<div class="sec-item-t '+c.cls+'"><i class="fas '+c.i+'"></i><div><div class="sec-lbl-t">'+c.l+'</div><div class="sec-desc-t">'+c.d+'</div></div></div>';
+  }).join('');
+  var ovEl=document.getElementById('comp-overallVal');
+  if(ovEl){ ovEl.textContent='Loading…'; ovEl.style.color='var(--muted)'; }
+}
+
+function compDebounceRenderLogs(){ clearTimeout(compState.logDebounce); compState.logDebounce=setTimeout(compRenderLogs,400); }
+
+async function compRenderLogs(){
+  var search=document.getElementById('comp-lSearch'); if(!search) return;
+  var tf=document.getElementById('comp-lType').value;
+  var sf=document.getElementById('comp-lSev').value;
+  var page=compState.logsPage||1;
+  var params=new URLSearchParams({page:page,limit:15});
+  if(tf) params.set('type',tf);
+  if(search.value.trim()) params.set('search',search.value.trim());
+  var c=document.getElementById('comp-logsContainer');
+  c.innerHTML='<div style="text-align:center;padding:28px;color:var(--muted);font-family:var(--mono);font-size:12px;">Loading…</div>';
+  var r=await apiFetch('/api/logs?'+params.toString());
+  if(!r){ c.innerHTML='<div style="text-align:center;padding:28px;color:var(--muted);font-family:var(--mono);font-size:12px;">Could not load logs</div>'; return; }
+  var data=await r.json();
+  var logs=data.logs||[], total=data.total||0, pages=data.pages||1;
+  var countEl=document.getElementById('comp-logCount');
+  if(countEl) countEl.textContent=total+' entries';
+  var filtered=sf?logs.filter(function(l){return (l.severity||'').toUpperCase()===sf;}):logs;
+  if(!filtered.length){ c.innerHTML='<div style="text-align:center;padding:28px;color:var(--muted);font-family:var(--mono);font-size:12px;">No matching logs</div>'; document.getElementById('comp-logsPag').innerHTML=''; return; }
+  var sevPill=function(s){ var mp={CRITICAL:'pill-err',HIGH:'pill-err',MEDIUM:'pill-warn',LOW:'pill-ok'}; return mp[String(s).toUpperCase()]||'pill-gray'; };
+  c.innerHTML=filtered.map(function(a){
+    var ts=a.timestamp?new Date(a.timestamp):new Date();
+    var sev=a.severity||'LOW';
+    var desc=a.filename||a.details||a.description||a.action||'';
+    var typeLabel=(a.action||a.event_type||'ACTIVITY').replace(/_/g,' ');
+    return '<div class="ai-t"><div class="ai-ico-t" style="background:rgba(0,136,255,.1);color:var(--blue);"><i class="fas fa-circle-dot"></i></div>'+
+      '<div style="flex:1;min-width:0;"><div style="display:flex;justify-content:space-between;gap:6px;align-items:center;">'+
+      '<div class="ai-title-t">'+typeLabel+'</div><span class="pill '+sevPill(sev)+'">'+sev+'</span></div>'+
+      '<div class="ai-desc-t">'+emEscH(String(desc).slice(0,120))+'</div>'+
+      '<div class="ai-time-t">'+ts.toLocaleString()+' · '+emEscH(a.employee_name||a.emp||'You')+'</div></div></div>';
+  }).join('');
+  var pagEl=document.getElementById('comp-logsPag');
+  pagEl.innerHTML=pages<=1?'':Array.from({length:pages},function(_,i){
+    return '<button class="btn btn-sm '+(i+1===page?'':'btn-ghost-t')+'" onclick="compState.logsPage='+(i+1)+';compRenderLogs()">'+(i+1)+'</button>';
+  }).join('');
+}
+
+async function compExportLogs(){
+  var r=await apiFetch('/api/logs?page=1&limit=1000');
+  if(!r) return;
+  var data=await r.json();
+  var logs=data.logs||[];
+  var hdr=['ID','Timestamp','Action','Description','Severity','Employee'];
+  var rows=logs.map(function(l){
+    return [l.id||l.log_id,l.timestamp,l.action||l.event_type,'"'+(l.filename||l.details||l.description||'').replace(/"/g,'""')+'"',l.severity||'LOW',l.employee_name||l.emp||''].join(',');
+  });
+  var blob=new Blob([[hdr.join(','),...rows].join('\n')],{type:'text/csv'});
+  var url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url; a.download='audit_'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function gdprFaq(el){
+  var a=el.nextElementSibling;
+  el.classList.toggle('open'); a.classList.toggle('open');
+  var ico=el.querySelector('.fa-chevron-down');
+  if(ico) ico.style.transform=el.classList.contains('open')?'rotate(180deg)':'';
+}
+
+function compSubmitGdpr(){
+  var type=document.getElementById('comp-gdprType').value;
+  var details=document.getElementById('comp-gdprDetails').value.trim();
+  var msgEl=document.getElementById('comp-gdprMsg');
+  if(!details){ msgEl.textContent='Details required'; msgEl.className='msg warn'; msgEl.style.display='block'; return; }
+  var ref='SAR-'+Math.floor(Math.random()*90000+10000);
+  compState.gdprReqs.unshift({id:ref,type:type,details:details,submitted:new Date(),status:'Submitted'});
+  msgEl.textContent='Request submitted. Reference: '+ref+'. Response within 30 days.'; msgEl.className='msg ok'; msgEl.style.display='block';
+  apiFetch('/api/log_activity',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'GDPR_REQUEST',filename:type,severity:'LOW'})}).catch(function(){});
+  document.getElementById('comp-gdprList').innerHTML=compState.gdprReqs.map(function(r){
+    return '<div class="ticket-card-t"><div style="display:flex;justify-content:space-between;"><div style="font-size:11px;font-weight:700;color:#fff;">'+r.type+'</div><span class="pill pill-info">'+r.status+'</span></div>'+
+      '<div style="font-size:9px;color:var(--muted);font-family:var(--mono);">'+r.id+' · '+r.submitted.toLocaleDateString()+'</div>'+
+      '<div style="font-size:10px;color:var(--muted);margin-top:3px;">'+r.details.slice(0,80)+(r.details.length>80?'…':'')+'</div></div>';
+  }).join('');
+  document.getElementById('comp-gdprDetails').value='';
+}
+
+function compSubmitDispute(){
+  var type=document.getElementById('comp-dispType').value;
+  var ref=document.getElementById('comp-dispRef').value.trim();
+  var desc=document.getElementById('comp-dispDesc').value.trim();
+  var msgEl=document.getElementById('comp-dispMsg');
+  if(!type){ msgEl.textContent='Select dispute type'; msgEl.className='msg warn'; msgEl.style.display='block'; return; }
+  if(!desc){ msgEl.textContent='Description required'; msgEl.className='msg warn'; msgEl.style.display='block'; return; }
+  var dspRef='DSP-'+Math.floor(Math.random()*90000+10000);
+  compState.disputes.unshift({id:dspRef,type:type,ref:ref,desc:desc,submitted:new Date(),status:'Under Review'});
+  msgEl.textContent='Dispute submitted. Reference: '+dspRef+'. Human review within 5 business days.'; msgEl.className='msg ok'; msgEl.style.display='block';
+  apiFetch('/api/log_activity',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'DISPUTE_SUBMITTED',filename:type,severity:'LOW'})}).catch(function(){});
+  document.getElementById('comp-disputeList').innerHTML=compState.disputes.map(function(d){
+    return '<div class="ticket-card-t"><div style="display:flex;justify-content:space-between;"><div style="font-size:11px;font-weight:700;color:#fff;">'+d.type.replace(/_/g,' ')+'</div><span class="pill pill-warn">'+d.status+'</span></div>'+
+      '<div style="font-size:9px;color:var(--muted);font-family:var(--mono);">'+d.id+' · '+d.submitted.toLocaleDateString()+(d.ref?' · Ref: '+d.ref:'')+'</div>'+
+      '<div style="font-size:10px;color:var(--muted);margin-top:3px;">'+d.desc.slice(0,100)+(d.desc.length>100?'…':'')+'</div></div>';
+  }).join('');
+  document.getElementById('comp-dispType').value=''; document.getElementById('comp-dispRef').value=''; document.getElementById('comp-dispDesc').value='';
+}
+
+// INIT
+fmInitFS();
+loadCtx();
+loadOvLog();
+loadEmps();
+loadMyFmUploads();
+startTimer();
+// init new teammate features
+clCheckFolder();
+
+// ── INTERN RESTRICTIONS ───────────────────────────────────────────────────
+// Override file manager write operations — view only for interns
+function fmTriggerUpload(){ return; }
+function fmNewFolder(){ return; }
+function fmCtxRename(){ return; }
+function fmCtxDelete(){ return; }
+function fmCtxNewFolder(){ return; }
+function fmHandleFileSelect(){ return; }
+function fmDrop(e){ e.preventDefault(); return; }
+// Block travel and cloud nav from any entry point
+function loadTravelStatus(){ return; }
+function loadTravelHistory(){ return; }
+function submitTravel(){ return; }
+function clCheckFolder(){ return; }
+function clUpload(){ return; }
+// ── END INTERN RESTRICTIONS ───────────────────────────────────────────────
+
+// ── NOTIFICATIONS ─────────────────────────────────────────────────────────────
+var _notifList = [];
+var _notifOpen = false;
+
+function toggleNotifPanel() {
+  _notifOpen = !_notifOpen;
+  var panel   = document.getElementById('notif-panel');
+  var overlay = document.getElementById('notif-overlay');
+  panel.classList.toggle('open', _notifOpen);
+  overlay.style.display = _notifOpen ? 'block' : 'none';
+  if (_notifOpen) { notifRender(); notifLoadFromServer(); }
+}
+
+function notifAdd(n) {
+  n.time   = n.time || new Date().toLocaleTimeString();
+  n.unread = true;
+  _notifList.unshift(n);
+  if (_notifList.length > 50) _notifList.pop();
+  notifUpdateBadge();
+  if (_notifOpen) notifRender();
+}
+
+function notifRender() {
+  var list = document.getElementById('notif-list');
+  if (!list) return;
+  if (!_notifList.length) {
+    list.innerHTML = '<div class="notif-empty"><i class="fas fa-bell-slash" style="font-size:24px;margin-bottom:8px;display:block;"></i>No notifications yet</div>';
+    return;
+  }
+  list.innerHTML = _notifList.map(function(n, i) {
+    return '<div class="notif-item ' + (n.unread ? 'unread' : '') + '" onclick="notifMarkRead('+i+')">' +
+      '<div class="notif-ico" style="background:' + (n.iconBg||'rgba(0,255,136,0.12)') + '">' + (n.icon||'🔔') + '</div>' +
+      '<div class="notif-body">' +
+        '<div class="notif-text">' + (n.text||'') + '</div>' +
+        '<div class="notif-time">' + (n.time||'') + '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function notifMarkRead(i) {
+  if (_notifList[i]) _notifList[i].unread = false;
+  notifUpdateBadge();
+  notifRender();
+}
+
+function notifMarkAllRead() {
+  _notifList.forEach(function(n){ n.unread = false; });
+  notifUpdateBadge();
+  notifRender();
+}
+
+function notifClearAll() {
+  _notifList = [];
+  notifUpdateBadge();
+  notifRender();
+}
+
+function notifLoadMore() {
+  notifLoadFromServer(true);
+}
+
+async function notifLoadFromServer() {
+  try {
+    var r = await apiFetch('/api/employee/notifications');
+    if (!r || !r.ok) return;
+    var data  = await r.json();
+    var items = Array.isArray(data) ? data : (data.notifications || []);
+    items.forEach(function(n) {
+      if (!_notifList.find(function(x){ return x._id && x._id === n._id; })) {
+        _notifList.push({
+          _id: n._id, icon: n.icon||'🔔', iconBg: n.icon_bg||'rgba(0,255,136,0.12)',
+          text: n.message||n.text||'', time: n.created_at||n.time||'', unread: !n.read
+        });
+      }
+    });
+    notifUpdateBadge();
+    if (_notifOpen) notifRender();
+  } catch(e){}
+}
+
+function notifUpdateBadge() {
+  var count = _notifList.filter(function(n){ return n.unread; }).length;
+  var badge = document.getElementById('notif-badge');
+  if (badge) { badge.textContent = count > 9 ? '9+' : count; badge.style.display = count ? 'flex' : 'none'; }
+}
+
+// Listen for real-time notifications
+socket.on('notification', function(data) {
+  notifAdd({ icon: data.icon||'🔔', iconBg: data.icon_bg||'rgba(0,255,136,0.12)', text: data.message||data.text||'', type: data.type||'info' });
+});
+
+// Listen for travel request status updates
+socket.on('travel_status_update', function(data) {
+  var icon    = data.status === 'approved' ? '✅' : '❌';
+  var iconBg  = data.status === 'approved' ? 'rgba(0,255,136,0.15)' : 'rgba(255,51,102,0.15)';
+  var text    = 'Your travel request (' + (data.source||'') + ' → ' + (data.destination||'') + ') has been ' + (data.status||'updated') + '.';
+  notifAdd({ icon: icon, iconBg: iconBg, text: text, type: 'travel' });
+  // Refresh travel panel if open
+  var active = document.querySelector('.section-dlp.active');
+  if (active && active.id === 'panel-travel') { loadTravelStatus(); loadTravelHistory(); }
+});
+
+// New mail notification
+socket.on('new_mail', function(data) {
+  notifAdd({ icon: '📬', iconBg: 'rgba(0,255,136,0.12)', text: 'New mail from ' + (data.from_name||data.from_email||'unknown') + ': ' + (data.subject||'(no subject)'), type: 'mail' });
+});
+
+// File approval notification  
+socket.on('file_approval', function(data) {
+  notifAdd({ icon: '📁', iconBg: 'rgba(0,136,255,0.15)', text: 'File request ' + (data.status||'updated') + ': ' + (data.file_name||''), type: 'file' });
+});
+
+// Init notifications
+notifLoadFromServer();
+setInterval(notifLoadFromServer, 30000);
+</script>
+</body>
+</html>

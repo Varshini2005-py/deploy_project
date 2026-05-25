@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XAI-ITD-DLP | Secure Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #0f9e6e;
+    --green-dim: #0b8560;
+    --red: #e0253a;
+    --blue: #1a6fef;
+    --bg: #eef2ff;
+    --surface: #ffffff;
+    --surface2: #f5f7ff;
+    --border: #dde3f5;
+    --text: #1a2340;
+    --muted: #6b7fa8;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    color: var(--text);
+  }
+
+  /* ── CARD ── */
+  .login-card {
+    display: flex;
+    width: 100%;
+    max-width: 900px;
+    min-height: 570px;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 24px 64px rgba(26,111,239,0.13), 0 4px 20px rgba(0,0,0,0.07);
+  }
+
+  /* ── LEFT PANEL ── */
+  .left-panel {
+    width: 40%;
+    background: linear-gradient(150deg, #1a6fef 0%, #1452c8 55%, #0e3da6 100%);
+    padding: 48px 36px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .left-panel::before {
+    content: '';
+    position: absolute;
+    width: 320px; height: 320px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.07);
+    top: -120px; right: -100px;
+    pointer-events: none;
+  }
+  .left-panel::after {
+    content: '';
+    position: absolute;
+    width: 200px; height: 200px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.05);
+    bottom: -60px; left: -60px;
+    pointer-events: none;
+  }
+
+  .left-logo {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .left-logo-icon {
+    width: 40px; height: 40px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    border: 1px solid rgba(255,255,255,0.22);
+  }
+
+  .left-logo-text {
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 0.5px;
+  }
+
+  .left-content { position: relative; z-index: 1; }
+
+  .left-title {
+    font-size: 26px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.3;
+    margin-bottom: 13px;
+  }
+
+  .left-desc {
+    font-size: 13px;
+    color: rgba(255,255,255,0.72);
+    line-height: 1.7;
+    margin-bottom: 30px;
+  }
+
+  .feature-list { display: flex; flex-direction: column; gap: 13px; }
+
+  .feature-item {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    font-size: 13px;
+    color: rgba(255,255,255,0.88);
+    font-weight: 500;
+  }
+
+  .feature-icon {
+    width: 30px; height: 30px;
+    background: rgba(255,255,255,0.12);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+
+  .left-footer {
+    font-size: 11px;
+    color: rgba(255,255,255,0.4);
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── RIGHT PANEL ── */
+  .right-panel {
+    width: 60%;
+    background: var(--surface);
+    padding: 48px 48px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  /* Step indicator */
+  .step-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 26px;
+  }
+
+  .step {
+    width: 28px; height: 4px;
+    border-radius: 2px;
+    background: var(--border);
+    transition: background 0.3s;
+  }
+  .step.active { background: var(--blue); }
+  .step.done   { background: var(--green-dim); }
+
+  .step-label {
+    font-size: 11px;
+    color: var(--muted);
+    margin-left: auto;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  h2 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    margin-bottom: 5px;
+    color: var(--text);
+  }
+
+  .subtitle {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 26px;
+  }
+
+  /* Alert */
+  .alert {
+    padding: 11px 14px;
+    border-radius: 9px;
+    font-size: 13px;
+    margin-bottom: 18px;
+    font-weight: 500;
+    display: none;
+  }
+  .alert.error {
+    background: #fff0f2;
+    border: 1px solid #ffd0d6;
+    color: var(--red);
+    display: block;
+  }
+  .alert.success {
+    background: rgba(15,158,110,0.07);
+    border: 1px solid rgba(15,158,110,0.3);
+    color: var(--green);
+    display: block;
+  }
+
+  /* Fields */
+  .field { margin-bottom: 17px; }
+
+  label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 7px;
+    letter-spacing: 0.2px;
+  }
+
+  .input-wrap { position: relative; }
+
+  .input-icon {
+    position: absolute;
+    left: 13px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 14px;
+    color: var(--muted);
+    pointer-events: none;
+  }
+
+  input[type="email"],
+  input[type="password"],
+  input[type="text"] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: 9px;
+    padding: 11px 14px 11px 38px;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  input:focus {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(26,111,239,0.1);
+    background: #fff;
+  }
+  input::placeholder { color: #b0bcd4; }
+  /* Role dropdown */
+  .input-wrap select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: 9px;
+    padding: 11px 14px 11px 38px;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7fa8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+  }
+  .input-wrap select:focus {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(26,111,239,0.1);
+    background-color: #fff;
+  }
+  .input-wrap select option { color: var(--text); background: #fff; }
+
+
+  /* OTP grid */
+  .otp-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .otp-digit {
+    aspect-ratio: 1;
+    text-align: center;
+    font-family: 'Inter', sans-serif;
+    font-size: 36px;
+    font-weight: 700;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: 9px;
+    color: var(--blue);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    padding: 0;
+  }
+  .otp-digit:focus {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(26,111,239,0.1);
+    background: #fff;
+  }
+
+  /* Button */
+  .btn {
+    width: 100%;
+    padding: 13px;
+    background: var(--blue);
+    border: none;
+    border-radius: 9px;
+    color: #ffffff;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    letter-spacing: 0.3px;
+  }
+  .btn:hover { background: #1452c8; box-shadow: 0 4px 16px rgba(26,111,239,0.3); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+
+  .btn-loading::after {
+    content: '';
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Timer */
+  .timer-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 14px;
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 500;
+  }
+  #timer-display { color: var(--blue); font-weight: 700; }
+  #timer-display.expiring { color: var(--red); }
+
+  .resend-btn {
+    background: none; border: none;
+    color: var(--blue); cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px; font-weight: 600;
+    padding: 0; text-decoration: underline;
+    display: none;
+  }
+
+  /* Security notice */
+  .security-notice {
+    margin-top: 20px;
+    padding: 11px 14px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: var(--surface2);
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+  .notice-icon { color: var(--blue); font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+
+  /* Status bar */
+  .status-bar {
+    display: flex;
+    gap: 16px;
+    margin-top: 18px;
+    flex-wrap: wrap;
+  }
+  .status-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); font-weight: 500; }
+  .status-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--green);
+    display: inline-block;
+    animation: blink 2s infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+  /* Hidden panels */
+  #otp-panel { display: none; }
+
+  #success-panel { display: none; text-align: center; padding: 20px 0; }
+  .success-icon { font-size: 48px; margin-bottom: 16px; animation: pop 0.5s ease; }
+  @keyframes pop { 0%{transform:scale(0)} 80%{transform:scale(1.2)} 100%{transform:scale(1)} }
+  .success-text { font-size: 20px; font-weight: 700; color: var(--text); letter-spacing: 0.5px; }
+  .success-sub  { font-size: 13px; color: var(--muted); margin-top: 8px; }
+
+  @media (max-width: 650px) {
+    .login-card { flex-direction: column; }
+    .left-panel, .right-panel { width: 100%; padding: 32px 28px; }
+    .left-title { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="login-card">
+
+  <!-- ── LEFT PANEL ── -->
+  <div class="left-panel">
+    <div class="left-logo">
+      <div class="left-logo-icon">🛡</div>
+      <div class="left-logo-text">XAI-ITD-DLP</div>
+    </div>
+
+    <div class="left-content">
+      <div class="left-title">Secure access to<br>your workspace</div>
+      <div class="left-desc">Enterprise data loss prevention — protecting your company's sensitive files with intelligent, privacy-respecting monitoring.</div>
+      <div class="feature-list">
+        <div class="feature-item">
+          <div class="feature-icon">📷</div>
+          Smart webcam with privacy controls
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">⏱</div>
+          30-min trust windows — no constant watching
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">📋</div>
+          Full audit trail on all file activity
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">🎥</div>
+          Meeting mode — cam pauses automatically
+        </div>
+      </div>
+    </div>
+
+    <div class="left-footer">© 2025 SecureCorp. All rights reserved.</div>
+  </div>
+
+  <!-- ── RIGHT PANEL ── -->
+  <div class="right-panel">
+
+    <!-- Step Indicator — same IDs as original -->
+    <div class="step-indicator">
+      <div class="step active" id="step1"></div>
+      <div class="step" id="step2"></div>
+      <span class="step-label" id="step-label-text">STEP 1 / 2</span>
+    </div>
+
+    <!-- Step 1: Credentials — same IDs as original -->
+    <div id="creds-panel">
+      <h2>Welcome back</h2>
+      <div class="subtitle">Sign in to your DLP secure dashboard</div>
+
+      <div id="alert-box" class="alert"></div>
+
+      <div class="field">
+        <label>Employee Email <span style="color:var(--red)">*</span></label>
+        <div class="input-wrap">
+          <span class="input-icon">✉</span>
+          <input type="email" id="email-input" placeholder="you@company.com" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Password <span style="color:var(--red)">*</span></label>
+        <div class="input-wrap">
+          <span class="input-icon">🔒</span>
+          <input type="password" id="pass-input" placeholder="Enter your password">
+        </div>
+      </div>
+
+
+      <div class="field">
+        <label>Role <span style="color:var(--red)">*</span></label>
+        <div class="input-wrap">
+          <span class="input-icon">👤</span>
+          <select id="role-input">
+            <option value="" disabled selected>Select your role</option>
+            <option value="employee">Employee</option>
+            <option value="manager">Manager</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn" id="send-otp-btn" onclick="requestOTP()">
+        → Sign In Securely
+      </button>
+
+      <div class="security-notice">
+        <span class="notice-icon">🛡</span>
+        <span>All login activity is monitored for compliance. Unauthorized access will be investigated.</span>
+      </div>
+
+      <div class="status-bar">
+        <div class="status-item"><span class="status-dot"></span> System Online</div>
+        <div class="status-item"><span class="status-dot"></span> Encryption Active</div>
+        <div class="status-item"><span class="status-dot"></span> Monitoring Ready</div>
+      </div>
+    </div>
+
+    <!-- Step 2: OTP — same IDs as original -->
+    <div id="otp-panel">
+      <h2>OTP Verification</h2>
+      <div class="subtitle" id="otp-subtitle">Check your email for the code</div>
+
+      <div id="otp-alert-box" class="alert"></div>
+
+      <div class="otp-grid" id="otp-grid">
+        <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+        <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+        <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+        <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+        <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+        <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+      </div>
+
+      <button class="btn" id="verify-btn" onclick="verifyOTP()">
+        ✓ Verify &amp; Login
+      </button>
+
+      <div class="timer-row">
+        <span>⏱ OTP expires in: <span id="timer-display">2:00</span></span>
+        <button class="resend-btn" id="resend-btn" onclick="resendOTP()">Resend OTP</button>
+      </div>
+    </div>
+
+    <!-- Success — same IDs as original -->
+    <div id="success-panel">
+      <div class="success-icon">✅</div>
+      <div class="success-text">ACCESS GRANTED</div>
+      <div class="success-sub">Redirecting to dashboard...</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── SCRIPT: ALL LOGIC UNCHANGED FROM ORIGINAL ── -->
+<script>
+  let userEmail = "";
+  let timerInterval = null;
+  let timerSeconds = 120;
+
+  // OTP digit inputs - auto-advance
+  document.querySelectorAll(".otp-digit").forEach((input, i, inputs) => {
+    input.addEventListener("input", e => {
+      const val = e.target.value.replace(/\D/g, "");
+      e.target.value = val;
+      if (val && i < inputs.length - 1) inputs[i + 1].focus();
+    });
+    input.addEventListener("keydown", e => {
+      if (e.key === "Backspace" && !input.value && i > 0) inputs[i - 1].focus();
+    });
+    input.addEventListener("paste", e => {
+      e.preventDefault();
+      const pasted = (e.clipboardData || window.clipboardData).getData("text").replace(/\D/g, "");
+      [...pasted.slice(0, 6)].forEach((ch, j) => {
+        if (inputs[j]) inputs[j].value = ch;
+      });
+      inputs[Math.min(pasted.length, 5)].focus();
+    });
+  });
+
+  function showAlert(box, msg, type) {
+    box.className = `alert ${type}`;
+    box.textContent = msg;
+  }
+
+  function setLoading(btn, loading) {
+    btn.disabled = loading;
+    btn.classList.toggle("btn-loading", loading);
+  }
+
+  async function requestOTP() {
+    const email = document.getElementById("email-input").value.trim();
+    const password = document.getElementById("pass-input").value;
+    const alertBox = document.getElementById("alert-box");
+    const btn = document.getElementById("send-otp-btn");
+
+    const role = document.getElementById("role-input").value;
+    if (!email || !password) {
+      showAlert(alertBox, "Please enter email and password.", "error");
+      return;
+    }
+    if (!role) {
+      showAlert(alertBox, "Please select your role.", "error");
+      return;
+    }
+
+    setLoading(btn, true);
+
+    try {
+      const resp = await fetch("/api/auth/request-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, role })
+      });
+      const data = await resp.json();
+
+      if (!resp.ok) {
+        showAlert(alertBox, data.error || "Authentication failed.", "error");
+        if (data.xai_reason) {
+          setTimeout(function() {
+            showXAIPopup([data.xai_reason], 'LOGIN BLOCKED — LOCATION RESTRICTED');
+          }, 300);
+        }
+        setLoading(btn, false);
+        return;
+      }
+
+      userEmail = email;
+      document.getElementById("otp-subtitle").textContent = `> OTP SENT TO ${email.toUpperCase()}`;
+
+      // Show dev OTP if email failed
+      if (data.dev_otp) {
+        document.getElementById("otp-alert-box").className = "alert success";
+        document.getElementById("otp-alert-box").textContent = `[DEV MODE] OTP: ${data.dev_otp}`;
+      }
+
+      switchToOTP();
+    } catch {
+      showAlert(alertBox, "Server error. Please try again.", "error");
+      setLoading(btn, false);
+    }
+  }
+
+  function switchToOTP() {
+    document.getElementById("creds-panel").style.display = "none";
+    document.getElementById("otp-panel").style.display = "block";
+    document.getElementById("step1").classList.add("done");
+    document.getElementById("step2").classList.add("active");
+    document.getElementById("step-label-text").textContent = "STEP 2 / 2";
+    document.querySelectorAll(".otp-digit")[0].focus();
+    startTimer();
+  }
+
+  function startTimer() {
+    timerSeconds = 120;
+    clearInterval(timerInterval);
+    updateTimerDisplay();
+    timerInterval = setInterval(() => {
+      timerSeconds--;
+      updateTimerDisplay();
+      if (timerSeconds <= 0) {
+        clearInterval(timerInterval);
+        document.getElementById("resend-btn").style.display = "inline";
+        document.getElementById("timer-display").textContent = "EXPIRED";
+      }
+    }, 1000);
+  }
+
+  function updateTimerDisplay() {
+    const m = Math.floor(timerSeconds / 60);
+    const s = timerSeconds % 60;
+    const display = document.getElementById("timer-display");
+    display.textContent = `${m}:${s.toString().padStart(2, "0")}`;
+    display.className = timerSeconds <= 30 ? "expiring" : "";
+  }
+
+  async function resendOTP() {
+    document.getElementById("resend-btn").style.display = "none";
+    document.getElementById("creds-panel").style.display = "block";
+    document.getElementById("otp-panel").style.display = "none";
+  }
+
+  async function verifyOTP() {
+    const digits = [...document.querySelectorAll(".otp-digit")].map(i => i.value).join("");
+    const alertBox = document.getElementById("otp-alert-box");
+    const btn = document.getElementById("verify-btn");
+
+    if (digits.length < 6) {
+      showAlert(alertBox, "Please enter the 6-digit OTP.", "error");
+      return;
+    }
+
+    setLoading(btn, true);
+
+    try {
+      const resp = await fetch("/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: userEmail, otp: digits })
+      });
+      const data = await resp.json();
+
+      if (!resp.ok) {
+        showAlert(alertBox, data.error || "Verification failed.", "error");
+        setLoading(btn, false);
+        return;
+      }
+
+      clearInterval(timerInterval);
+      document.getElementById("otp-panel").style.display = "none";
+      document.getElementById("success-panel").style.display = "block";
+
+      if (data.xai_login) {
+        sessionStorage.setItem('xai_login', JSON.stringify(data.xai_login));
+      }
+
+      setTimeout(() => { window.location.href = data.redirect; }, 1500);
+    } catch {
+      showAlert(alertBox, "Server error. Please try again.", "error");
+      setLoading(btn, false);
+    }
+  }
+
+  // Enter key support
+  document.getElementById("pass-input").addEventListener("keydown", e => {
+    if (e.key === "Enter") requestOTP();
+  });
+
+  /* ── XAI POPUP ENGINE (login page) ── */
+  function showXAIPopup(sentences, title) {
+    var old = document.getElementById('xai-popup-overlay');
+    if (old) old.remove();
+
+    var list = Array.isArray(sentences) ? sentences : [sentences];
+    var lvl  = 'HIGH';
+    if (title && title.indexOf('MEDIUM') !== -1) lvl = 'MEDIUM';
+    if (title && title.indexOf('LOW')    !== -1) lvl = 'LOW';
+
+    var hc  = {HIGH:'#e0253a', MEDIUM:'#e08a00', LOW:'#0f9e6e'}[lvl] || '#e0253a';
+    var ic  = {HIGH:'#fff3f3', MEDIUM:'#fffbf0', LOW:'#f0fdf7'}[lvl] || '#fff3f3';
+    var ico = {HIGH:'⚠',       MEDIUM:'⚠',       LOW:'ℹ'}[lvl]       || '⚠';
+
+    var ov = document.createElement('div');
+    ov.id = 'xai-popup-overlay';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(10,10,30,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;';
+
+    ov.innerHTML =
+      '<div style="background:#fff;border-radius:14px;width:100%;max-width:520px;max-height:88vh;overflow-y:auto;box-shadow:0 24px 72px rgba(224,37,58,0.25);">' +
+        '<div style="background:' + hc + ';border-radius:14px 14px 0 0;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;">' +
+          '<div style="display:flex;align-items:center;gap:10px;">' +
+            '<div style="width:32px;height:32px;background:rgba(255,255,255,0.22);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;">' + ico + '</div>' +
+            '<div>' +
+              '<div style="font-family:\'Share Tech Mono\',monospace;font-size:9px;color:rgba(255,255,255,0.75);letter-spacing:2px;margin-bottom:2px;">AI EXPLANATION — SHAP MODEL</div>' +
+              '<div style="font-family:\'Share Tech Mono\',monospace;font-size:11px;color:#fff;font-weight:700;letter-spacing:1px;">' + (title || 'WHY THIS WAS BLOCKED') + '</div>' +
+            '</div>' +
+          '</div>' +
+          '<button onclick="document.getElementById(\'xai-popup-overlay\').remove()" ' +
+            'style="background:rgba(255,255,255,0.2);border:none;color:#fff;width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:14px;line-height:1;">✕</button>' +
+        '</div>' +
+        '<div style="padding:18px 20px;">' +
+          '<div style="font-family:\'Share Tech Mono\',monospace;font-size:9px;color:#6b7fa8;letter-spacing:2px;margin-bottom:10px;">REASON FOR THIS DECISION</div>' +
+          '<ul style="list-style:none;padding:0;margin:0;">' +
+            list.map(function(s) {
+              return '<li style="display:flex;align-items:flex-start;gap:9px;padding:11px 13px;border-radius:8px;' +
+                'background:' + ic + ';border-left:3px solid ' + hc + ';margin-bottom:8px;' +
+                'font-family:Rajdhani,sans-serif;font-size:14px;color:#1a2340;line-height:1.6;">' +
+                '<span style="color:' + hc + ';flex-shrink:0;margin-top:1px;font-size:13px;">' + ico + '</span>' +
+                '<span>' + s + '</span></li>';
+            }).join('') +
+          '</ul>' +
+          '<div style="margin-top:12px;padding:9px 12px;background:#eef2ff;border-radius:7px;display:flex;align-items:center;gap:7px;">' +
+            '<svg width="13" height="13" fill="none" stroke="#6b7fa8" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>' +
+            '<span style="font-family:\'Share Tech Mono\',monospace;font-size:9px;color:#6b7fa8;letter-spacing:0.5px;">Powered by SHAP — real model reasoning, not manual rules.</span>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    document.body.appendChild(ov);
+    ov.addEventListener('click', function(e) { if (e.target === ov) ov.remove(); });
+  }
+</script>
+</body>
+</html>

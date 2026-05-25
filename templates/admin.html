@@ -1,0 +1,1457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XAI-ITD-DLP | Admin Control Center</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root {
+    --gold:#1a6fef; --gold-dim:#1452c8; --red:#e0253a;
+    --cyan:#0f9e6e; --white:#1a2340; --purple:#e08a00;
+    --bg:#eef2ff; --surface:#ffffff; --surface2:#f5f7ff;
+    --border:#dde3f5; --text:#1a2340; --muted:#6b7fa8;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);font-family:'Rajdhani',sans-serif;color:var(--text);min-height:100vh;overflow-x:hidden;}
+
+  /* Subtle light background */
+  body::before{
+    content:'';position:fixed;inset:0;
+    background:
+      radial-gradient(ellipse 80% 50% at 20% 10%, rgba(26,111,239,0.04) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 90%, rgba(15,158,110,0.04) 0%, transparent 60%),
+      linear-gradient(rgba(26,111,239,0.015) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(26,111,239,0.015) 1px,transparent 1px);
+    background-size:100% 100%,100% 100%,50px 50px,50px 50px;
+    pointer-events:none;z-index:0;
+  }
+
+  /* NAV */
+  nav{position:sticky;top:0;z-index:200;
+      background:linear-gradient(135deg,#1a6fef,#1452c8,#0e3da6);
+      border-bottom:none;padding:0 32px;
+      display:flex;align-items:center;justify-content:space-between;height:64px;
+      backdrop-filter:blur(10px);}
+  .nav-brand{display:flex;align-items:center;gap:14px;}
+  .brand-icon{width:36px;height:36px;background:linear-gradient(135deg,#0f9e6e,#1a6fef);
+    border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;
+    box-shadow:0 0 16px rgba(26,111,239,0.35);}
+  .brand-text{font-family:'Share Tech Mono',monospace;font-size:13px;color:#ffffff;letter-spacing:2px;font-weight:700;}
+  .brand-sub{font-size:10px;color:rgba(255,255,255,0.7);letter-spacing:1px;font-family:'Share Tech Mono',monospace;}
+  .nav-center{font-family:'Share Tech Mono',monospace;font-size:11px;color:rgba(255,255,255,0.85);letter-spacing:2px;
+    display:flex;align-items:center;gap:8px;}
+  .pulse-red{width:8px;height:8px;background:#0f9e6e;border-radius:50%;
+    animation:blink 1s infinite;box-shadow:0 0 8px #0f9e6e;}
+  @keyframes blink{0%,100%{opacity:1;}50%{opacity:0.35;}}
+  .nav-right{display:flex;align-items:center;gap:12px;}
+  .admin-badge{background:rgba(255,255,255,0.15);
+    border:1px solid rgba(255,255,255,0.3);color:#ffffff;border-radius:6px;
+    padding:5px 14px;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;}
+  .user-chip{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);border-radius:6px;
+    padding:6px 14px;font-size:13px;font-family:'Rajdhani',sans-serif;color:#ffffff;}
+  .logout-btn{background:transparent;border:1px solid rgba(255,255,255,0.4);color:rgba(255,255,255,0.85);
+    padding:6px 16px;border-radius:6px;cursor:pointer;font-family:'Share Tech Mono',monospace;
+    font-size:10px;letter-spacing:1px;transition:all 0.2s;}
+  .logout-btn:hover{background:rgba(255,255,255,0.15);box-shadow:none;}
+
+  /* LAYOUT */
+  .main{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:32px 24px;}
+  .section-title{font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:3px;
+    color:var(--muted);text-transform:uppercase;margin-bottom:16px;
+    display:flex;align-items:center;gap:12px;}
+  .section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+
+  /* STATS */
+  .stats-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:12px;margin-bottom:32px;}
+  @media(max-width:1100px){.stats-grid{grid-template-columns:repeat(4,1fr);}}
+  @media(max-width:700px){.stats-grid{grid-template-columns:repeat(2,1fr);}}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    padding:16px 18px;position:relative;overflow:hidden;transition:border-color 0.3s;
+    box-shadow:0 2px 12px rgba(26,111,239,0.06);}
+  .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+  .stat-card.gold::before{background:#1a6fef;}
+  .stat-card.red::before{background:#e0253a;}
+  .stat-card.cyan::before{background:#0f9e6e;}
+  .stat-card.purple::before{background:#e08a00;}
+  .stat-card:hover{border-color:rgba(26,111,239,0.25);}
+  .stat-label{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);
+    text-transform:uppercase;margin-bottom:8px;}
+  .stat-value{font-size:28px;font-weight:700;line-height:1;margin-bottom:2px;font-family:'Share Tech Mono',monospace;}
+  .stat-value.gold{color:#1a6fef;} .stat-value.red{color:#e0253a;}
+  .stat-value.cyan{color:#0f9e6e;} .stat-value.purple{color:#e08a00;}
+  .stat-value.white{color:var(--text);}
+  .stat-sub{font-size:10px;color:var(--muted);}
+
+  /* TABS */
+  .tabs{display:flex;gap:2px;margin-bottom:20px;border-bottom:1px solid var(--border);}
+  .tab-btn{background:none;border:none;border-bottom:2px solid transparent;padding:12px 22px;
+    color:var(--muted);font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;
+    letter-spacing:1px;cursor:pointer;transition:all 0.2s;margin-bottom:-1px;}
+  .tab-btn:hover{color:var(--text);}
+  .tab-btn.active{color:#1a6fef;border-bottom-color:#1a6fef;}
+  .tab-panel{display:none;} .tab-panel.active{display:block;}
+
+  /* CARDS */
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;}
+  .card h3{font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:2px;
+    color:var(--muted);margin-bottom:18px;text-transform:uppercase;}
+
+  /* FORM */
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .form-group{margin-bottom:14px;}
+  .form-group label{display:block;font-family:'Share Tech Mono',monospace;font-size:9px;
+    letter-spacing:2px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;}
+  input[type=text],input[type=email],input[type=password],select{
+    width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+    padding:10px 14px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;
+    outline:none;transition:border-color 0.2s;}
+  input:focus,select:focus{border-color:#1a6fef;}
+  select option{background:var(--surface2);color:var(--text);}
+  .btn-gold{background:transparent;border:1px solid #1a6fef;color:#1a6fef;
+    padding:11px 24px;border-radius:8px;cursor:pointer;font-family:'Share Tech Mono',monospace;
+    font-size:11px;font-weight:700;letter-spacing:1px;transition:all 0.2s;white-space:nowrap;}
+  .btn-gold:hover{background:rgba(26,111,239,0.1);box-shadow:0 0 14px rgba(26,111,239,0.18);}
+  .btn-small{background:transparent;border:1px solid var(--border);color:var(--muted);
+    padding:6px 14px;border-radius:6px;cursor:pointer;font-family:'Share Tech Mono',monospace;
+    font-size:9px;letter-spacing:1px;transition:all 0.2s;white-space:nowrap;}
+  .btn-small:hover{border-color:#1a6fef;color:#1a6fef;}
+  .btn-red{border-color:#e0253a;color:#e0253a;}
+  .btn-red:hover{background:rgba(224,37,58,0.08);border-color:#e0253a;}
+  .btn-cyan{border-color:#0f9e6e;color:#0f9e6e;}
+  .btn-cyan:hover{background:rgba(15,158,110,0.08);}
+  .msg-box{margin-top:12px;font-family:'Share Tech Mono',monospace;font-size:11px;padding:10px 14px;
+    border-radius:6px;display:none;letter-spacing:1px;}
+  .msg-box.ok{background:rgba(15,158,110,0.08);color:#0f9e6e;border:1px solid rgba(15,158,110,0.3);display:block;}
+  .msg-box.err{background:rgba(224,37,58,0.08);color:#e0253a;border:1px solid rgba(224,37,58,0.3);display:block;}
+
+  /* TABLES */
+  .table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{background:var(--surface2);padding:12px 16px;text-align:left;font-family:'Share Tech Mono',monospace;
+     font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;
+     border-bottom:1px solid var(--border);}
+  td{padding:12px 16px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text);}
+  tr:last-child td{border-bottom:none;}
+  tr:hover td{background:rgba(26,111,239,0.03);}
+  .empty-state{text-align:center;padding:48px;color:var(--muted);
+    font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:2px;}
+
+  /* BADGES */
+  .badge{padding:3px 10px;border-radius:4px;font-family:'Share Tech Mono',monospace;
+    font-size:9px;letter-spacing:1px;font-weight:700;}
+  .badge-manager{background:rgba(26,111,239,0.1);color:#1a6fef;border:1px solid rgba(26,111,239,0.3);}
+  .badge-employee{background:rgba(224,138,0,0.1);color:#e08a00;border:1px solid rgba(224,138,0,0.3);}
+  .badge-active{background:rgba(15,158,110,0.1);color:#0f9e6e;border:1px solid rgba(15,158,110,0.3);}
+  .badge-inactive{background:rgba(224,37,58,0.1);color:#e0253a;border:1px solid rgba(224,37,58,0.3);}
+  .risk-badge{padding:3px 8px;border-radius:4px;font-size:9px;font-family:'Share Tech Mono',monospace;letter-spacing:1px;}
+  .risk-LOW{background:rgba(15,158,110,0.1);color:#0f9e6e;}
+  .risk-MEDIUM{background:rgba(224,138,0,0.1);color:#e08a00;}
+  .risk-HIGH{background:rgba(224,37,58,0.1);color:#e0253a;}
+
+  /* LOGS VIEWER PANEL */
+  .log-viewer{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:20px;margin-top:20px;}
+  .log-viewer-header{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--muted);
+    letter-spacing:2px;margin-bottom:14px;display:flex;align-items:center;gap:10px;}
+
+  /* SEARCH BAR */
+  .search-bar{display:flex;gap:10px;margin-bottom:16px;align-items:center;}
+  .search-bar input{flex:1;}
+
+  /* LIVE FEED */
+  .feed-wrap{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+  .feed-header-row{display:grid;grid-template-columns:90px 130px 1fr 150px 90px 90px;gap:12px;
+    padding:11px 16px;background:var(--surface2);border-bottom:1px solid var(--border);
+    font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
+  .feed-body{max-height:500px;overflow-y:auto;}
+  .feed-body::-webkit-scrollbar{width:4px;}
+  .feed-body::-webkit-scrollbar-track{background:var(--surface2);}
+  .feed-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+  .feed-row{display:grid;grid-template-columns:90px 130px 1fr 150px 90px 90px;gap:12px;
+    padding:10px 16px;border-bottom:1px solid var(--border);align-items:center;
+    font-size:12px;transition:background 0.15s;}
+  .feed-row:last-child{border-bottom:none;}
+  .feed-row:hover{background:rgba(26,111,239,0.03);}
+  .feed-row.new-row{animation:blueFlash 0.8s ease;}
+  @keyframes blueFlash{0%{background:rgba(26,111,239,0.1);}100%{background:transparent;}}
+  .ev-time{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);}
+  .ev-type{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text);
+    background:var(--surface2);padding:3px 8px;border-radius:4px;overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap;border:1px solid var(--border);}
+  .ev-detail{color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ev-user{font-size:11px;color:var(--muted);}
+
+  /* TOAST */
+  #toast-container{position:fixed;top:76px;right:20px;z-index:9999;
+    display:flex;flex-direction:column;gap:10px;max-width:380px;}
+  .toast{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;
+    font-size:13px;animation:slideIn 0.3s ease;border-left:3px solid #1a6fef;
+    box-shadow:0 4px 20px rgba(26,111,239,0.12);}
+  @keyframes slideIn{from{transform:translateX(100%);opacity:0;}to{transform:translateX(0);opacity:1;}}
+  .toast-title{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;
+    color:#1a6fef;margin-bottom:4px;}
+</style>
+</head>
+<body>
+
+<div id="toast-container"></div>
+
+<nav>
+  <div class="nav-brand">
+    <div class="brand-icon">👁</div>
+    <div>
+      <div class="brand-text">XAI-ITD-DLP</div>
+      <div class="brand-sub">ADMIN CONTROL CENTER</div>
+    </div>
+  </div>
+  <div class="nav-center"><div class="pulse-red"></div>MASTER SURVEILLANCE ACTIVE</div>
+  <div class="nav-right">
+    <span class="admin-badge">ADMIN</span>
+    <span class="user-chip">{{ user.name if user else "Admin" }}</span>
+    <button class="logout-btn" onclick="location.href='/logout'">LOGOUT</button>
+  </div>
+</nav>
+
+<div class="main">
+
+  <!-- STATS -->
+  <div class="section-title">System Overview</div>
+  <div class="stats-grid">
+    <div class="stat-card gold"><div class="stat-label">Employees</div><div class="stat-value gold" id="st-emp">—</div><div class="stat-sub">Registered</div></div>
+    <div class="stat-card cyan"><div class="stat-label">Managers</div><div class="stat-value cyan" id="st-mgr">—</div><div class="stat-sub">Registered</div></div>
+    <div class="stat-card gold"><div class="stat-label">Active Users</div><div class="stat-value white" id="st-active">—</div><div class="stat-sub">Enabled accounts</div></div>
+    <div class="stat-card gold"><div class="stat-label">Online Now</div><div class="stat-value gold" id="st-online">—</div><div class="stat-sub">Live sessions</div></div>
+    <div class="stat-card cyan"><div class="stat-label">Total Logs</div><div class="stat-value cyan" id="st-logs">—</div><div class="stat-sub">All activities</div></div>
+    <div class="stat-card red"><div class="stat-label">High Risk</div><div class="stat-value red" id="st-high">—</div><div class="stat-sub">Flagged events</div></div>
+    <div class="stat-card red"><div class="stat-label">Blocked</div><div class="stat-value red" id="st-blocked">—</div><div class="stat-sub">Security enforcements</div></div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('feed',this)">🔴 Live Feed</button>
+    <button class="tab-btn" onclick="switchTab('employees',this)">👥 Employees</button>
+    <button class="tab-btn" onclick="switchTab('managers',this)">🧑‍💼 Managers</button>
+    <button class="tab-btn" onclick="switchTab('adduser',this)">➕ Add User</button>
+    <button class="tab-btn" onclick="switchTab('lookup',this)">🔍 User Lookup</button>
+    <button class="tab-btn" onclick="switchTab('security',this)">🚨 Security Events</button>
+    <button class="tab-btn" onclick="switchTab('travel-map',this)">🗺 Travel Tracking</button>
+    <button class="tab-btn" onclick="switchTab('sendfile',this)">📤 Send File</button>
+    <button class="tab-btn" onclick="switchTab('mgr-travel',this)">✈️ Manager Travel <span id="mgr-travel-pending-badge" style="display:none;background:#ff9900;color:#000;border-radius:9px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:4px;font-family:'Share Tech Mono',monospace;">0</span></button>
+    <button class="tab-btn" onclick="switchTab('clients',this)">📇 Client Directory</button>
+    <button class="tab-btn" onclick="switchTab('client-logs',this)">📋 Meeting Logs</button>
+    <button class="tab-btn" onclick="openAdminMeetingHub()">🎥 Meeting Hub</button>
+    <button class="tab-btn" onclick="switchTab('xai',this)">🔍 XAI Explainability</button>
+  </div>
+
+  <!-- TAB: LIVE FEED -->
+  <div class="tab-panel active" id="tab-feed">
+    <div class="feed-wrap">
+      <div class="feed-header-row">
+        <span>Time</span><span>Event</span><span>Detail</span>
+        <span>User</span><span>Location</span><span>Risk</span>
+      </div>
+      <div class="feed-body" id="feed-body">
+        <div class="empty-state">Loading all system events...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: EMPLOYEES -->
+  <div class="tab-panel" id="tab-employees">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Name</th><th>Email</th><th>Department</th><th>Status</th><th>Allowed Locations</th><th>Last Login</th><th>Last Location</th><th>Risk</th><th>Actions</th></tr></thead>
+        <tbody id="employees-body"><tr><td colspan="9" class="empty-state">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB: MANAGERS -->
+  <div class="tab-panel" id="tab-managers">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Name</th><th>Email</th><th>Department</th><th>Status</th><th>Last Login</th><th>Last Location</th><th>Actions</th></tr></thead>
+        <tbody id="managers-body"><tr><td colspan="7" class="empty-state">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB: ADD USER -->
+  <div class="tab-panel" id="tab-adduser">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:900px">
+
+      <!-- Add Employee -->
+      <div class="card">
+        <h3>➕ Add New Employee</h3>
+        <div class="form-group"><label>Full Name</label><input type="text" id="emp-name" placeholder="e.g. Rajasri K"></div>
+        <div class="form-group"><label>Email Address</label><input type="email" id="emp-email" placeholder="employee@company.com"></div>
+        <div class="form-group"><label>Password</label><input type="password" id="emp-password" placeholder="Min 8 characters"></div>
+        <div class="form-group"><label>Department</label>
+          <select id="emp-dept">
+            <option>IT</option><option>HR</option><option>Finance</option>
+            <option>Operations</option><option>Sales</option><option>Marketing</option><option>Legal</option>
+          </select>
+        </div>
+        <div id="emp-msg" class="msg-box"></div>
+        <button class="btn-gold" onclick="addUser('employee')" style="margin-top:4px;width:100%">CREATE EMPLOYEE ACCOUNT</button>
+      </div>
+
+      <!-- Add Manager -->
+      <div class="card">
+        <h3>➕ Add New Manager</h3>
+        <div class="form-group"><label>Full Name</label><input type="text" id="mgr-name" placeholder="e.g. Priya Manager"></div>
+        <div class="form-group"><label>Email Address</label><input type="email" id="mgr-email" placeholder="manager@company.com"></div>
+        <div class="form-group"><label>Password</label><input type="password" id="mgr-password" placeholder="Min 8 characters"></div>
+        <div class="form-group"><label>Department</label>
+          <select id="mgr-dept">
+            <option>IT</option><option>HR</option><option>Finance</option>
+            <option>Operations</option><option>Sales</option><option>Marketing</option><option>Legal</option>
+          </select>
+        </div>
+        <div id="mgr-msg" class="msg-box"></div>
+        <button class="btn-gold" onclick="addUser('manager')" style="margin-top:4px;width:100%">CREATE MANAGER ACCOUNT</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: USER LOOKUP -->
+  <div class="tab-panel" id="tab-lookup">
+    <div class="card" style="margin-bottom:20px">
+      <h3>🔍 Look Up User Activity</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Enter any employee or manager email to view all their logs, security events and login history.</p>
+      <div class="search-bar">
+        <input type="email" id="lookup-email" placeholder="Enter email address e.g. employee@company.com">
+        <button class="btn-gold" onclick="lookupUser()">SEARCH</button>
+      </div>
+      <div id="lookup-msg" class="msg-box"></div>
+    </div>
+
+    <div id="lookup-results" style="display:none">
+
+      <!-- User Profile -->
+      <div id="lookup-profile" class="card" style="margin-bottom:20px"></div>
+
+      <!-- Logs -->
+      <div class="section-title">Activity Logs</div>
+      <div class="table-wrap" style="margin-bottom:20px">
+        <table>
+          <thead><tr><th>Timestamp</th><th>Event Type</th><th>Detail</th><th>Location</th><th>IP</th><th>Risk</th></tr></thead>
+          <tbody id="lookup-logs-body"><tr><td colspan="6" class="empty-state">No logs.</td></tr></tbody>
+        </table>
+      </div>
+
+      <!-- Security Events -->
+      <div class="section-title">Security Events</div>
+      <div class="table-wrap" style="margin-bottom:20px">
+        <table>
+          <thead><tr><th>Timestamp</th><th>Action</th><th>Detail</th><th>Location</th><th>Status</th></tr></thead>
+          <tbody id="lookup-sec-body"><tr><td colspan="5" class="empty-state">No security events.</td></tr></tbody>
+        </table>
+      </div>
+
+      <!-- Login History -->
+      <div class="section-title">Login History</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Timestamp</th><th>Location</th><th>IP Address</th></tr></thead>
+          <tbody id="lookup-history-body"><tr><td colspan="3" class="empty-state">No login history.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: TRAVEL TRACKING -->
+  <div class="tab-panel" id="tab-travel-map">
+    <div style="font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:2px;color:var(--gold);margin-bottom:16px;">EMPLOYEE TRAVEL TRACKING MAP</div>
+    <div style="display:grid;grid-template-columns:1fr 320px;gap:18px;align-items:start;">
+      <div>
+        <div id="admin-travel-map" style="height:460px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);"></div>
+        <div style="margin-top:8px;font-size:10px;color:#6b7280;font-family:'Share Tech Mono',monospace;">🟢 Source &nbsp;|&nbsp; 🔴 Destination &nbsp;|&nbsp; ─ ─ Route line (colour = status)</div>
+      </div>
+      <div>
+        <div style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--gold);margin-bottom:10px;">REQUESTS</div>
+        <div id="admin-travel-list" style="display:flex;flex-direction:column;gap:10px;max-height:460px;overflow-y:auto;padding-right:4px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: SEND FILE -->
+  <div class="tab-panel" id="tab-sendfile">
+    <div class="card" style="max-width:680px;">
+      <h3>&#128228; SEND FILE TO USER</h3>
+
+      <!-- Audience mode selector -->
+      <div style="font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;">Select Audience</div>
+      <div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;">
+        <button class="btn-small btn-cyan" id="sf-mode-all"      onclick="sfSetMode('all')"      style="font-size:10px;">&#127760; ALL (Public)</button>
+        <button class="btn-small"          id="sf-mode-manager"  onclick="sfSetMode('manager')"  style="font-size:10px;">&#128084; ALL MANAGERS</button>
+        <button class="btn-small"          id="sf-mode-employee" onclick="sfSetMode('employee')" style="font-size:10px;">&#128100; ALL EMPLOYEES</button>
+        <button class="btn-small"          id="sf-mode-personal" onclick="sfSetMode('personal')" style="font-size:10px;">&#127919; SPECIFIC PERSON</button>
+      </div>
+
+      <!-- Broadcast info banner — shown for all/manager/employee modes -->
+      <div id="sf-broadcast-banner" style="background:rgba(26,111,239,0.08);border:1px solid rgba(26,111,239,0.3);border-radius:8px;padding:12px 14px;margin-bottom:14px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--cyan);letter-spacing:1px;">
+        &#127760; PUBLIC BROADCAST — File will be visible to ALL managers and employees.
+      </div>
+
+      <!-- Personal mode only: search + role filter + list + chips -->
+      <div id="sf-personal-section" style="display:none;">
+        <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;align-items:center;">
+          <!-- Role filter — only inside specific person mode -->
+          <div style="display:flex;gap:6px;">
+            <button class="btn-small btn-cyan" id="sf-filter-all"      onclick="sfSetFilter('all')"      style="font-size:10px;">ALL</button>
+            <button class="btn-small"          id="sf-filter-manager"  onclick="sfSetFilter('manager')"  style="font-size:10px;">MANAGERS</button>
+            <button class="btn-small"          id="sf-filter-employee" onclick="sfSetFilter('employee')" style="font-size:10px;">EMPLOYEES</button>
+          </div>
+          <input id="sf-search" type="text" placeholder="Search name or email…"
+            oninput="sfSearch()"
+            style="flex:1;min-width:180px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;outline:none;" />
+        </div>
+        <div style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-bottom:14px;background:var(--surface2);">
+          <div id="sf-list-inner" style="padding:4px 0;">
+            <div style="text-align:center;padding:20px;color:var(--muted);font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:1px;">
+              Select a filter or search to load users
+            </div>
+          </div>
+        </div>
+        <div style="margin-bottom:14px;">
+          <div style="font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;">Selected Recipients</div>
+          <div id="sf-selected-chips" style="display:flex;flex-wrap:wrap;gap:6px;min-height:28px;align-items:center;">
+            <span id="sf-no-selection" style="color:var(--muted);font-size:12px;font-family:'Rajdhani',sans-serif;">None selected</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- File picker -->
+      <div class="form-group">
+        <label>FILE TO SEND</label>
+        <input type="file" id="sf-file-input"
+          style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;cursor:pointer;" />
+      </div>
+
+      <button class="btn-gold" onclick="sfSend()" style="width:100%;margin-top:6px;">&#128228; SEND FILE</button>
+      <div id="sf-msg" class="msg-box" style="display:none;margin-top:10px;"></div>
+    </div>
+  </div>
+
+  <!-- TAB: MANAGER TRAVEL REQUESTS -->
+  <div class="tab-panel" id="tab-mgr-travel">
+    <div style="font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:2px;color:var(--gold);margin-bottom:16px;">MANAGER TRAVEL REQUESTS</div>
+    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+      <button class="btn-small btn-cyan" onclick="loadMgrTravel('all')" id="mgt-filter-all">All</button>
+      <button class="btn-small" onclick="loadMgrTravel('pending')" id="mgt-filter-pending">Pending</button>
+      <button class="btn-small" onclick="loadMgrTravel('approved')" id="mgt-filter-approved">Approved</button>
+      <button class="btn-small" onclick="loadMgrTravel('rejected')" id="mgt-filter-rejected">Rejected</button>
+    </div>
+    <div id="mgt-container">
+      <div class="empty-state">Click "Manager Travel" tab to load requests.</div>
+    </div>
+  </div>
+
+  <!-- TAB: SECURITY EVENTS -->
+  <div class="tab-panel" id="tab-security">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Timestamp</th><th>User</th><th>Action</th><th>Detail</th><th>Location</th><th>Status</th></tr></thead>
+        <tbody id="sec-events-body"><tr><td colspan="6" class="empty-state">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+
+  <!-- CLIENT DIRECTORY -->
+  <div class="tab-panel" id="tab-clients">
+    <div class="section-title">Client Directory</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:20px;">
+      <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--gold);letter-spacing:2px;margin-bottom:14px;">ADD NEW CLIENT</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px;">
+        <div><div style="font-size:10px;color:var(--muted);margin-bottom:4px;">NAME *</div><input id="adm-cl-name" placeholder="Client name" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;outline:none;"></div>
+        <div><div style="font-size:10px;color:var(--muted);margin-bottom:4px;">EMAIL</div><input id="adm-cl-email" placeholder="client@company.com" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;outline:none;"></div>
+        <div><div style="font-size:10px;color:var(--muted);margin-bottom:4px;">PHONE</div><input id="adm-cl-phone" placeholder="+91 99999 99999" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;outline:none;"></div>
+        <div><div style="font-size:10px;color:var(--muted);margin-bottom:4px;">COMPANY</div><input id="adm-cl-company" placeholder="Company Ltd." style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;outline:none;"></div>
+        <div style="grid-column:span 2;"><div style="font-size:10px;color:var(--muted);margin-bottom:4px;">NOTES</div><input id="adm-cl-notes" placeholder="Any additional notes..." style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;outline:none;"></div>
+      </div>
+      <button onclick="adminAddClient()" style="background:rgba(26,111,239,0.08);border:1px solid rgba(26,111,239,0.3);color:#1a6fef;padding:9px 20px;border-radius:6px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;">+ ADD CLIENT</button>
+      <span id="adm-cl-msg" style="margin-left:12px;font-size:11px;"></span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <div>
+        <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:10px;">ALL CLIENTS</div>
+        <div id="adm-clients-list" style="display:flex;flex-direction:column;gap:8px;max-height:500px;overflow-y:auto;"></div>
+      </div>
+      <div>
+        <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:10px;">ASSIGN CLIENT TO EMPLOYEE</div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px;">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:5px;">SELECT CLIENT</div>
+          <select id="adm-assign-client" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;outline:none;margin-bottom:10px;"><option value="">— Select client —</option></select>
+          <div style="font-size:10px;color:var(--muted);margin-bottom:5px;">SELECT EMPLOYEE</div>
+          <select id="adm-assign-emp" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;outline:none;margin-bottom:10px;"><option value="">— Select employee —</option></select>
+          <button onclick="adminAssignClient()" style="width:100%;background:rgba(0,255,136,.15);border:1px solid rgba(0,255,136,.4);color:var(--cyan);padding:9px;border-radius:6px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;">ASSIGN</button>
+          <div id="adm-assign-msg" style="margin-top:8px;font-size:11px;"></div>
+        </div>
+        <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:10px;">EMPLOYEE CLIENT DETAIL</div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;">
+          <select id="adm-emp-detail-select" onchange="loadEmployeeClientDetail(this.value)" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12px;outline:none;margin-bottom:12px;"><option value="">— Select employee —</option></select>
+          <div id="adm-emp-detail-view"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CLIENT MEETING LOGS (ADMIN FULL VIEW) -->
+  <div class="tab-panel" id="tab-client-logs">
+    <div class="section-title">Client Meeting Logs — Full Details</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+      <table style="width:100%;border-collapse:collapse;">
+        <thead><tr style="border-bottom:1px solid var(--border);">
+          <th style="padding:11px 14px;text-align:left;font-size:10px;color:var(--gold);font-family:'Share Tech Mono',monospace;letter-spacing:1px;">EMPLOYEE</th>
+          <th style="padding:11px 14px;text-align:left;font-size:10px;color:var(--gold);font-family:'Share Tech Mono',monospace;letter-spacing:1px;">CLIENT</th>
+          <th style="padding:11px 14px;text-align:left;font-size:10px;color:var(--gold);font-family:'Share Tech Mono',monospace;letter-spacing:1px;">DATE &amp; TIME</th>
+          <th style="padding:11px 14px;text-align:left;font-size:10px;color:var(--gold);font-family:'Share Tech Mono',monospace;letter-spacing:1px;">AGENDA</th>
+          <th style="padding:11px 14px;text-align:left;font-size:10px;color:var(--gold);font-family:'Share Tech Mono',monospace;letter-spacing:1px;">APPROVED BY</th>
+        </tr></thead>
+        <tbody id="adm-meeting-logs-body"><tr><td colspan="5" style="padding:24px;text-align:center;color:var(--muted);font-size:12px;">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB: XAI EXPLAINABILITY -->
+  <div class="tab-panel" id="tab-xai">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+      <div class="section-title" style="margin-bottom:0;">🔍 XAI Explainability — SHAP Feature Attribution</div>
+      <button onclick="loadXAIExplanations()" class="btn-gold" style="display:flex;align-items:center;gap:6px;">↻ Refresh</button>
+    </div>
+    <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:16px;">
+      RED bars = feature increasing risk &nbsp;|&nbsp; GREEN bars = feature reducing risk &nbsp;|&nbsp; Values show SHAP attribution weight
+    </div>
+    <div id="xai-cards-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;">
+      <div class="empty-state" style="padding:40px;">Click XAI Explainability to load SHAP data.</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const socket = io();
+// Register admin socket — joins 'managers' room so it receives manager-room events
+socket.on('connect', function() {
+  socket.emit('register', {
+    email: '{{ user.email if user else "" }}',
+    role:  'admin'
+  });
+});
+
+// ── STATS ─────────────────────────────────────────────────────────────────────
+async function loadStats() {
+  try {
+    const d = await (await fetch("/api/admin/stats")).json();
+    document.getElementById("st-emp").textContent     = d.total_employees ?? 0;
+    document.getElementById("st-mgr").textContent     = d.total_managers ?? 0;
+    document.getElementById("st-active").textContent  = d.active_users ?? 0;
+    document.getElementById("st-online").textContent  = d.active_sessions ?? 0;
+    document.getElementById("st-logs").textContent    = d.total_logs ?? 0;
+    document.getElementById("st-high").textContent    = d.high_risk_events ?? 0;
+    document.getElementById("st-blocked").textContent = d.blocked_actions ?? 0;
+  } catch(e) { console.error(e); }
+}
+
+// ── LIVE FEED ─────────────────────────────────────────────────────────────────
+async function loadFeed() {
+  try {
+    const logs = await (await fetch("/api/admin/all-logs")).json();
+    const body = document.getElementById("feed-body");
+    if (!logs.length) { body.innerHTML = '<div class="empty-state">No events yet.</div>'; return; }
+    body.innerHTML = "";
+    logs.forEach(l => addFeedRow(l.timestamp||"—", l.event_type||"—", l.detail||"—", l.user_email||"—", l.location||"—", l.risk_level||"LOW", false));
+  } catch(e) { console.error(e); }
+}
+
+function addFeedRow(time, type, detail, user, location, risk, isNew) {
+  const body = document.getElementById("feed-body");
+  const empty = body.querySelector(".empty-state");
+  if (empty) body.innerHTML = "";
+  const div = document.createElement("div");
+  div.className = "feed-row" + (isNew ? " new-row" : "");
+  div.innerHTML =
+    '<span class="ev-time">' + time + '</span>' +
+    '<span class="ev-type">' + type + '</span>' +
+    '<span class="ev-detail" title="' + detail + '">' + detail + '</span>' +
+    '<span class="ev-user">' + user + '</span>' +
+    '<span class="ev-user">' + location + '</span>' +
+    '<span class="risk-badge risk-' + risk + '">' + risk + '</span>';
+  if (isNew) body.insertBefore(div, body.firstChild);
+  else body.appendChild(div);
+}
+
+// ── EMPLOYEES ─────────────────────────────────────────────────────────────────
+async function loadEmployees() {
+  try {
+    const users = await (await fetch("/api/admin/employees")).json();
+    const tbody = document.getElementById("employees-body");
+    if (!users.length) { tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No employees yet.</td></tr>'; return; }
+    tbody.innerHTML = users.map(u => {
+      const statusBadge = u.is_active
+        ? '<span class="badge badge-active">ACTIVE</span>'
+        : '<span class="badge badge-inactive">INACTIVE</span>';
+      const locs = (u.allowed_locations||[]).join(", ") || '<span style="color:var(--muted)">No restriction</span>';
+      const toggleBtn = u.is_active
+        ? '<button class="btn-small btn-red" onclick="toggleUser(\'' + u.email + '\',false)">DEACTIVATE</button>'
+        : '<button class="btn-small btn-cyan" onclick="toggleUser(\'' + u.email + '\',true)">ACTIVATE</button>';
+      return '<tr>' +
+        '<td style="font-weight:600">' + (u.name||"—") + '</td>' +
+        '<td style="font-family:\'Share Tech Mono\',monospace;font-size:11px;color:var(--muted)">' + (u.email||"—") + '</td>' +
+        '<td>' + (u.department||"IT") + '</td>' +
+        '<td>' + statusBadge + '</td>' +
+        '<td style="font-size:11px">' + locs + '</td>' +
+        '<td style="font-size:11px;color:var(--muted)">' + (u.last_login_time||"Never") + '</td>' +
+        '<td style="font-size:11px;color:var(--muted)">' + (u.last_login_location||"—") + '</td>' +
+        '<td style="color:' + ((u.risk_score||0)>50?'var(--red)':'var(--cyan)') + ';font-weight:700;font-family:\'Share Tech Mono\',monospace;font-size:12px">' + (u.risk_score||0) + '</td>' +
+        '<td style="display:flex;gap:6px;flex-wrap:wrap">' + toggleBtn +
+        '<button class="btn-small" onclick="lookupFromTable(\'' + u.email + '\')">VIEW LOGS</button></td>' +
+        '</tr>';
+    }).join("");
+  } catch(e) { console.error(e); }
+}
+
+// ── MANAGERS ──────────────────────────────────────────────────────────────────
+async function loadManagers() {
+  try {
+    const users = await (await fetch("/api/admin/managers")).json();
+    const tbody = document.getElementById("managers-body");
+    if (!users.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No managers yet.</td></tr>'; return; }
+    tbody.innerHTML = users.map(u => {
+      const statusBadge = u.is_active
+        ? '<span class="badge badge-active">ACTIVE</span>'
+        : '<span class="badge badge-inactive">INACTIVE</span>';
+      const toggleBtn = u.is_active
+        ? '<button class="btn-small btn-red" onclick="toggleUser(\'' + u.email + '\',false)">DEACTIVATE</button>'
+        : '<button class="btn-small btn-cyan" onclick="toggleUser(\'' + u.email + '\',true)">ACTIVATE</button>';
+      return '<tr>' +
+        '<td style="font-weight:600">' + (u.name||"—") + '</td>' +
+        '<td style="font-family:\'Share Tech Mono\',monospace;font-size:11px;color:var(--muted)">' + (u.email||"—") + '</td>' +
+        '<td>' + (u.department||"IT") + '</td>' +
+        '<td>' + statusBadge + '</td>' +
+        '<td style="font-size:11px;color:var(--muted)">' + (u.last_login_time||"Never") + '</td>' +
+        '<td style="font-size:11px;color:var(--muted)">' + (u.last_login_location||"—") + '</td>' +
+        '<td style="display:flex;gap:6px">' + toggleBtn +
+        '<button class="btn-small" onclick="lookupFromTable(\'' + u.email + '\')">VIEW LOGS</button></td>' +
+        '</tr>';
+    }).join("");
+  } catch(e) { console.error(e); }
+}
+
+// ── ADD USER ──────────────────────────────────────────────────────────────────
+async function addUser(role) {
+  const prefix = role === "employee" ? "emp" : "mgr";
+  const name   = document.getElementById(prefix+"-name").value.trim();
+  const email  = document.getElementById(prefix+"-email").value.trim();
+  const pass   = document.getElementById(prefix+"-password").value.trim();
+  const dept   = document.getElementById(prefix+"-dept").value;
+  const msg    = document.getElementById(prefix+"-msg");
+
+  if (!name||!email||!pass) { msg.className="msg-box err"; msg.textContent="All fields required."; return; }
+  if (pass.length < 6) { msg.className="msg-box err"; msg.textContent="Password must be at least 6 characters."; return; }
+
+  try {
+    const res = await fetch("/api/admin/add-user", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({name, email, password:pass, role, department:dept})
+    });
+    const d = await res.json();
+    if (res.ok) {
+      msg.className="msg-box ok"; msg.textContent="✅ " + d.message;
+      document.getElementById(prefix+"-name").value="";
+      document.getElementById(prefix+"-email").value="";
+      document.getElementById(prefix+"-password").value="";
+      loadStats();
+      if (role==="employee") loadEmployees();
+      else loadManagers();
+    } else {
+      msg.className="msg-box err"; msg.textContent="❌ " + (d.error||"Failed.");
+    }
+  } catch { msg.className="msg-box err"; msg.textContent="Server error."; }
+}
+
+// ── TOGGLE USER ───────────────────────────────────────────────────────────────
+async function toggleUser(email, activate) {
+  const url = activate ? "/api/admin/reactivate-user" : "/api/admin/deactivate-user";
+  const res = await fetch(url, {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({email})
+  });
+  if (res.ok) { loadEmployees(); loadManagers(); loadStats(); }
+}
+
+// ── USER LOOKUP ───────────────────────────────────────────────────────────────
+async function lookupUser() {
+  const email = document.getElementById("lookup-email").value.trim();
+  const msg   = document.getElementById("lookup-msg");
+  if (!email) { msg.className="msg-box err"; msg.textContent="Enter an email address."; return; }
+  msg.className="msg-box ok"; msg.textContent="Searching...";
+
+  try {
+    const [dataRes, usersRes] = await Promise.all([
+      fetch("/api/admin/user-logs/" + encodeURIComponent(email)),
+      fetch("/api/admin/employees")
+    ]);
+    if (!dataRes.ok) { msg.className="msg-box err"; msg.textContent="User not found."; return; }
+
+    const data = await dataRes.json();
+    const allEmps = await usersRes.json();
+    const allMgrs = await (await fetch("/api/admin/managers")).json();
+    const user = [...allEmps,...allMgrs].find(u=>u.email===email);
+
+    msg.className="msg-box ok"; msg.textContent="✅ Found " + data.logs.length + " logs, " + data.security_events.length + " security events.";
+
+    // Profile card
+    if (user) {
+      document.getElementById("lookup-profile").innerHTML =
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px">' +
+        '<div><div style="font-size:10px;color:var(--muted);letter-spacing:2px;font-family:\'Share Tech Mono\',monospace;margin-bottom:4px">NAME</div><div style="font-size:16px;font-weight:700">' + user.name + '</div></div>' +
+        '<div><div style="font-size:10px;color:var(--muted);letter-spacing:2px;font-family:\'Share Tech Mono\',monospace;margin-bottom:4px">ROLE</div><div><span class="badge ' + (user.role==="manager"?"badge-manager":"badge-employee") + '">' + user.role.toUpperCase() + '</span></div></div>' +
+        '<div><div style="font-size:10px;color:var(--muted);letter-spacing:2px;font-family:\'Share Tech Mono\',monospace;margin-bottom:4px">DEPT</div><div>' + (user.department||"IT") + '</div></div>' +
+        '<div><div style="font-size:10px;color:var(--muted);letter-spacing:2px;font-family:\'Share Tech Mono\',monospace;margin-bottom:4px">STATUS</div><div><span class="badge ' + (user.is_active?"badge-active":"badge-inactive") + '">' + (user.is_active?"ACTIVE":"INACTIVE") + '</span></div></div>' +
+        '<div><div style="font-size:10px;color:var(--muted);letter-spacing:2px;font-family:\'Share Tech Mono\',monospace;margin-bottom:4px">LAST LOGIN</div><div style="font-size:12px">' + (user.last_login_time||"Never") + '</div></div>' +
+        '<div><div style="font-size:10px;color:var(--muted);letter-spacing:2px;font-family:\'Share Tech Mono\',monospace;margin-bottom:4px">LAST LOCATION</div><div style="font-size:12px">' + (user.last_login_location||"—") + '</div></div>' +
+        '</div>';
+    }
+
+    // Activity logs
+    const logTbody = document.getElementById("lookup-logs-body");
+    logTbody.innerHTML = data.logs.length ? data.logs.map(l =>
+      '<tr>' +
+      '<td style="font-family:\'Share Tech Mono\',monospace;font-size:10px;color:var(--muted)">' + (l.timestamp||"—") + '</td>' +
+      '<td style="font-family:\'Share Tech Mono\',monospace;font-size:10px;color:var(--white)">' + (l.event_type||"—") + '</td>' +
+      '<td style="font-size:12px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (l.detail||"—") + '</td>' +
+      '<td style="font-size:11px;color:var(--muted)">' + (l.location||"—") + '</td>' +
+      '<td style="font-size:11px;color:var(--muted);font-family:\'Share Tech Mono\',monospace">' + (l.ip||"—") + '</td>' +
+      '<td><span class="risk-badge risk-' + (l.risk_level||"LOW") + '">' + (l.risk_level||"LOW") + '</span></td>' +
+      '</tr>'
+    ).join("") : '<tr><td colspan="6" class="empty-state">No activity logs.</td></tr>';
+
+    // Security events
+    const secTbody = document.getElementById("lookup-sec-body");
+    secTbody.innerHTML = data.security_events.length ? data.security_events.map(e =>
+      '<tr>' +
+      '<td style="font-family:\'Share Tech Mono\',monospace;font-size:10px;color:var(--muted)">' + (e.timestamp||"—") + '</td>' +
+      '<td style="font-family:\'Share Tech Mono\',monospace;font-size:10px;color:var(--red)">' + (e.action||"—") + '</td>' +
+      '<td style="font-size:12px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (e.detail||"—") + '</td>' +
+      '<td style="font-size:11px;color:var(--muted)">' + (e.location||"—") + '</td>' +
+      '<td><span class="badge ' + (e.blocked?"badge-inactive":"badge-active") + '">' + (e.status||"—").toUpperCase() + '</span></td>' +
+      '</tr>'
+    ).join("") : '<tr><td colspan="5" class="empty-state">No security events.</td></tr>';
+
+    // Login history
+    const hisTbody = document.getElementById("lookup-history-body");
+    hisTbody.innerHTML = data.login_history.length ? data.login_history.map(h =>
+      '<tr>' +
+      '<td style="font-family:\'Share Tech Mono\',monospace;font-size:10px;color:var(--muted)">' + (h.time||"—") + '</td>' +
+      '<td>' + (h.location||"—") + '</td>' +
+      '<td style="font-family:\'Share Tech Mono\',monospace;font-size:10px;color:var(--muted)">' + (h.ip||"—") + '</td>' +
+      '</tr>'
+    ).join("") : '<tr><td colspan="3" class="empty-state">No login history.</td></tr>';
+
+    document.getElementById("lookup-results").style.display = "block";
+  } catch(e) { msg.className="msg-box err"; msg.textContent="Error: " + e.message; }
+}
+
+function lookupFromTable(email) {
+  // Switch to lookup tab and search
+  document.querySelectorAll(".tab-panel").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+  document.getElementById("tab-lookup").classList.add("active");
+  document.querySelectorAll(".tab-btn")[4].classList.add("active");
+  document.getElementById("lookup-email").value = email;
+  lookupUser();
+}
+
+// ── SECURITY EVENTS ───────────────────────────────────────────────────────────
+async function loadSecurityEvents() {
+  try {
+    const events = await (await fetch("/api/admin/all-security-events")).json();
+    const tbody = document.getElementById("sec-events-body");
+    if (!events.length) { tbody.innerHTML='<tr><td colspan="6" class="empty-state">No security events.</td></tr>'; return; }
+    tbody.innerHTML = events.map(e =>
+      '<tr>' +
+      '<td style="font-family:\'Share Tech Mono\',monospace;font-size:10px;color:var(--muted)">' + (e.timestamp||"—") + '</td>' +
+      '<td style="font-family:\'Share Tech Mono\',monospace;font-size:11px">' + (e.user_email||"—") + '</td>' +
+      '<td style="font-family:\'Share Tech Mono\',monospace;font-size:10px;color:var(--red)">' + (e.action||"—") + '</td>' +
+      '<td style="font-size:12px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (e.detail||"—") + '</td>' +
+      '<td style="font-size:11px;color:var(--muted)">' + (e.location||"—") + '</td>' +
+      '<td><span class="badge ' + (e.blocked?"badge-inactive":"badge-active") + '">' + (e.status||"—").toUpperCase() + '</span></td>' +
+      '</tr>'
+    ).join("");
+  } catch {}
+}
+
+// ── REAL-TIME ─────────────────────────────────────────────────────────────────
+// ── Manager travel request arrived ──────────────────────────────────────────
+socket.on('manager_travel_request', function(data) {
+  // Show a prominent notification toast
+  addToast('✈️ Manager ' + (data.email || '') + ' submitted a travel request: ' +
+           (data.source || '?') + ' → ' + (data.destination || '?'), false);
+  // If admin is currently on the Manager Travel tab, auto-refresh it
+  var active = document.querySelector('.tab-panel.active');
+  if (active && active.id === 'tab-mgr-travel') {
+    loadMgrTravel(_mgtFilter || 'all');
+  }
+  // Also bump the pending badge if it exists
+  var badge = document.getElementById('mgr-travel-pending-badge');
+  if (badge) {
+    var cur = parseInt(badge.textContent) || 0;
+    badge.textContent = cur + 1;
+    badge.style.display = 'inline';
+  }
+});
+
+socket.on("new_event", function(data) {
+  addFeedRow(data.time||new Date().toLocaleTimeString(), data.type, data.detail||data.type, data.email||data.user, data.location||"—", data.risk||"LOW", true);
+  const t = document.getElementById("st-logs");
+  t.textContent = parseInt(t.textContent||0) + 1;
+  if (data.risk==="HIGH") { const h=document.getElementById("st-high"); h.textContent=parseInt(h.textContent||0)+1; }
+  if (data.blocked) { const b=document.getElementById("st-blocked"); b.textContent=parseInt(b.textContent||0)+1; }
+});
+
+// ── TABS ──────────────────────────────────────────────────────────────────────
+function switchTab(name, btn) {
+  document.querySelectorAll(".tab-panel").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+  document.getElementById("tab-"+name).classList.add("active");
+  btn.classList.add("active");
+  if (name==="employees") loadEmployees();
+  if (name==="managers")  loadManagers();
+  if (name==="security")    loadSecurityEvents();
+  if (name==="travel-map")  { loadAdminTravelMap(); }
+  if (name==="sendfile")   { sfSetFilter(sfFilter || 'all'); }
+  if (name==="mgr-travel")  {
+    loadMgrTravel('all');
+    // Clear pending badge
+    var badge = document.getElementById('mgr-travel-pending-badge');
+    if (badge) { badge.textContent = '0'; badge.style.display = 'none'; }
+  }
+  if (name==="xai") loadXAIExplanations();
+}
+
+
+// ── ADMIN TRAVEL TRACKING ─────────────────────────────────────────────────────
+var adminTravelMap = null;
+
+async function loadAdminTravelMap() {
+  // Init map once
+  if (!adminTravelMap) {
+    adminTravelMap = L.map("admin-travel-map", {zoomControl:true, attributionControl:false}).setView([10.9,79.4], 10);
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {maxZoom:19}).addTo(adminTravelMap);
+  } else {
+    adminTravelMap.invalidateSize();
+  }
+
+  // Clear old layers
+  adminTravelMap.eachLayer(function(l){ if(l instanceof L.CircleMarker || l instanceof L.Polyline) adminTravelMap.removeLayer(l); });
+
+  try {
+    var token = document.cookie.match(/session_token=([^;]+)/)?.[1] || "";
+    var res = await fetch("/api/admin/travel-tracking", {headers:{"X-Auth-Token":"{{ session_token }}"}});
+    var reqs = await res.json();
+
+    var list = document.getElementById("admin-travel-list");
+    if (!reqs || !reqs.length) {
+      list.innerHTML = "<div style='color:#6b7280;font-family:'Share Tech Mono',monospace;font-size:11px;text-align:center;padding:20px;'>No travel requests yet.</div>";
+      return;
+    }
+
+    var bounds = [];
+    list.innerHTML = "";
+
+    reqs.forEach(function(r) {
+      var tm = r.travel_mode || {};
+      var statusCol = tm.status==="approved"?"#00ff88":tm.status==="pending"?"#ffd700":"#ff2244";
+
+      // Source marker — green
+      if (tm.src_coords && tm.src_coords.lat) {
+        var sc = [tm.src_coords.lat, tm.src_coords.lon];
+        L.circleMarker(sc, {radius:8,fillColor:"#00ff88",color:"#fff",weight:2,fillOpacity:0.85})
+          .addTo(adminTravelMap)
+          .bindPopup("<b style='color:var(--cyan)'>SRC: "+r.name+"</b><br>"+escAdmin(tm.source||"Source")+"<br>"+sc[0].toFixed(4)+", "+sc[1].toFixed(4));
+        bounds.push(sc);
+      }
+      // Dest marker — red
+      if (tm.dst_coords && tm.dst_coords.lat) {
+        var dc = [tm.dst_coords.lat, tm.dst_coords.lon];
+        L.circleMarker(dc, {radius:8,fillColor:"#ff2244",color:"#fff",weight:2,fillOpacity:0.85})
+          .addTo(adminTravelMap)
+          .bindPopup("<b style='color:#ff2244'>DST: "+r.name+"</b><br>"+escAdmin(tm.destination||"Dest")+"<br>"+dc[0].toFixed(4)+", "+dc[1].toFixed(4));
+        bounds.push(dc);
+        // Route line
+        if (tm.src_coords && tm.src_coords.lat) {
+          L.polyline([[tm.src_coords.lat,tm.src_coords.lon],dc],
+            {color:statusCol,weight:2,dashArray:"6,6",opacity:0.7}).addTo(adminTravelMap);
+        }
+      }
+
+      // List card
+      var card = document.createElement("div");
+      card.style.cssText = "background:#0d0d1a;border:1px solid "+statusCol+";border-radius:8px;padding:12px;cursor:pointer;";
+      card.innerHTML =
+        "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:6px'>"+
+        "<span style='font-family:'Share Tech Mono',monospace;font-size:11px;font-weight:700;color:var(--text)'>"+escAdmin(r.name||r.email)+"</span>"+
+        "<span style='font-size:10px;font-family:'Share Tech Mono',monospace;color:"+statusCol+"'>"+((tm.status||"").toUpperCase())+"</span></div>"+
+        "<div style='font-size:11px;color:#9ca3af;margin-bottom:3px'>📍 "+escAdmin(tm.source||"—")+"</div>"+
+        "<div style='font-size:11px;color:#9ca3af;margin-bottom:3px'>🏁 "+escAdmin(tm.destination||"—")+"</div>"+
+        "<div style='font-size:10px;color:#6b7280;font-family:'Share Tech Mono',monospace'>"+escAdmin(tm.start_date||"—")+" → "+escAdmin(tm.end_date||"—")+"</div>"+
+        "<div style='font-size:11px;color:#9ca3af;margin-top:4px'>"+escAdmin(tm.reason||"")+"</div>";
+      // Click to fly to
+      if (tm.src_coords && tm.src_coords.lat) {
+        var lat=tm.src_coords.lat, lon=tm.src_coords.lon;
+        card.onclick = function(){ adminTravelMap.flyTo([lat,lon],14,{duration:1}); };
+      }
+      list.appendChild(card);
+    });
+
+    if (bounds.length > 0) adminTravelMap.fitBounds(bounds, {padding:[30,30]});
+  } catch(e) { console.error("admin travel map:", e); }
+}
+
+// ── ADMIN: MANAGER TRAVEL REQUESTS ───────────────────────────────────────────
+var _mgtFilter = 'all';
+
+async function loadMgrTravel(filter) {
+  _mgtFilter = filter || 'all';
+  ['all','pending','approved','rejected'].forEach(function(f) {
+    var btn = document.getElementById('mgt-filter-'+f);
+    if (!btn) return;
+    btn.style.borderColor = f === _mgtFilter ? 'var(--cyan)' : '';
+    btn.style.color       = f === _mgtFilter ? 'var(--cyan)' : '';
+  });
+  var container = document.getElementById('mgt-container');
+  if (!container) return;
+  container.innerHTML = '<div class="empty-state">Loading…</div>';
+  try {
+    var res = await fetch('/api/admin/manager-travel-requests', {headers:{'X-Auth-Token':'{{ session_token }}'}});
+    if (!res.ok) throw new Error('HTTP '+res.status+' — ensure /api/admin/manager-travel-requests endpoint exists');
+    var data = await res.json();
+    var all  = Array.isArray(data) ? data : [];
+
+    // Normalise nested travel_mode
+    var reqs = all.map(function(r) {
+      var tm = r.travel_mode || {};
+      return {
+        email:       r.email || '',
+        name:        r.name  || r.email || 'Unknown',
+        status:      (tm.status || 'pending').toLowerCase(),
+        source:      tm.source      || '',
+        destination: tm.destination || '',
+        start_date:  tm.start_date  || '',
+        end_date:    tm.end_date    || '',
+        reason:      tm.reason      || '',
+        requested_at:tm.requested_at || r.created_at || ''
+      };
+    });
+
+    if (_mgtFilter !== 'all') reqs = reqs.filter(function(r){ return r.status === _mgtFilter; });
+
+    if (!reqs.length) {
+      container.innerHTML = '<div class="empty-state">No manager travel requests' + (_mgtFilter!=='all' ? ' ('+_mgtFilter+')' : '') + '.</div>';
+      return;
+    }
+    container.innerHTML = '<div style="display:flex;flex-direction:column;gap:10px;">'+
+      reqs.map(function(r) {
+        var sc   = r.status==='approved'?'var(--cyan)':r.status==='rejected'?'var(--red)':'var(--gold)';
+        var icon = r.status==='approved'?'✅':r.status==='rejected'?'❌':'⏳';
+        var em   = r.email.replace(/'/g,"&#39;");
+        var btns = r.status === 'pending'
+          ? '<button onclick="adminApproveMgrTravel(\''+em+'\')" style="background:transparent;border:1px solid #00ff88;color:var(--cyan);padding:5px 14px;border-radius:6px;cursor:pointer;font-family:\'Share Tech Mono\',monospace;font-size:9px;letter-spacing:1px;margin-right:6px;">✓ APPROVE</button>'
+            + '<button onclick="adminRejectMgrTravel(\''+em+'\')" style="background:transparent;border:1px solid var(--red);color:var(--red);padding:5px 14px;border-radius:6px;cursor:pointer;font-family:\'Share Tech Mono\',monospace;font-size:9px;letter-spacing:1px;">✗ REJECT</button>'
+          : '<span style="font-family:\'Share Tech Mono\',monospace;font-size:10px;color:'+sc+';">'+icon+' '+r.status.toUpperCase()+'</span>';
+        return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;transition:border-color .18s;" onmouseover="this.style.borderColor=\'rgba(26,111,239,0.25)\'" onmouseout="this.style.borderColor=\'var(--border)\'">' +
+          '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">' +
+            '<div style="flex:1;">' +
+              '<div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px;">'+escAdmin(r.source||'—')+' <span style="color:var(--cyan);margin:0 4px;">→</span> '+escAdmin(r.destination||'—')+'</div>' +
+              '<div style="font-family:\'Share Tech Mono\',monospace;font-size:9px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap;margin-bottom:4px;">' +
+                '<span>👤 <span style="color:var(--text);">'+escAdmin(r.name)+'</span></span>' +
+                '<span>📧 '+escAdmin(r.email)+'</span>' +
+                '<span>📅 '+escAdmin(r.start_date||'—')+' → '+escAdmin(r.end_date||'—')+'</span>' +
+              '</div>' +
+              (r.reason ? '<div style="font-size:12px;color:var(--text);margin-bottom:3px;">📝 '+escAdmin(r.reason)+'</div>' : '') +
+              (r.requested_at ? '<div style="font-family:\'Share Tech Mono\',monospace;font-size:9px;color:var(--muted);">Submitted: '+escAdmin(r.requested_at)+'</div>' : '') +
+            '</div>' +
+            '<div style="flex-shrink:0;">'+btns+'</div>' +
+          '</div>' +
+        '</div>';
+      }).join('') + '</div>';
+  } catch(e) {
+    container.innerHTML = '<div style="background:rgba(224,37,58,0.08);border:1px solid rgba(224,37,58,0.3);border-radius:8px;padding:16px;font-family:\'Share Tech Mono\',monospace;font-size:10px;color:var(--red);text-align:center;">⚠ '+escAdmin(e.message)+'</div>';
+  }
+}
+
+async function adminApproveMgrTravel(email) {
+  try {
+    var res = await fetch('/api/admin/approve-manager-travel', {
+      method:'POST', headers:{'Content-Type':'application/json','X-Auth-Token':'{{ session_token }}'},
+      body: JSON.stringify({email: email})
+    });
+    var d = await res.json();
+    if (res.ok) { loadMgrTravel(_mgtFilter); addToast('Travel approved for manager '+email); }
+    else addToast('Error: '+(d.error||'Failed'), true);
+  } catch(e) { addToast('Server error', true); }
+}
+
+async function adminRejectMgrTravel(email) {
+  var reason = prompt('Rejection reason (optional):') || 'Rejected by admin.';
+  try {
+    var res = await fetch('/api/admin/reject-manager-travel', {
+      method:'POST', headers:{'Content-Type':'application/json','X-Auth-Token':'{{ session_token }}'},
+      body: JSON.stringify({email: email, reason: reason})
+    });
+    var d = await res.json();
+    if (res.ok) { loadMgrTravel(_mgtFilter); addToast('Travel rejected for manager '+email); }
+    else addToast('Error: '+(d.error||'Failed'), true);
+  } catch(e) { addToast('Server error', true); }
+}
+
+function addToast(msg, isErr) {
+  var c = document.getElementById('toast-container');
+  if (!c) return;
+  var t = document.createElement('div');
+  t.className = 'toast';
+  t.style.borderLeftColor = isErr ? 'var(--red)' : 'var(--cyan)';
+  t.innerHTML = '<div class="toast-title" style="color:'+(isErr?'var(--red)':'var(--cyan)')+'">'+(isErr?'ERROR':'SUCCESS')+'</div>'+msg;
+  c.appendChild(t);
+  setTimeout(function(){ if(t.parentNode)t.parentNode.removeChild(t); }, 4000);
+}
+
+function escAdmin(s){ return String(s||"").replace(/\x3c/g,"&lt;").replace(/\x3e/g,"&gt;"); }
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+loadStats();
+loadFeed();
+setInterval(loadStats, 10000);
+
+// ── SEND FILE FEATURE ─────────────────────────────────────────────────────────
+var sfMode     = 'all';   // 'all' | 'manager' | 'employee' | 'personal'
+var sfFilter   = 'all';
+var sfAllUsers = [];
+var sfSelected = {};      // { email: {name,email,role} } — personal mode only
+
+// Audience mode → backend audience param mapping
+var sfAudienceMap = {
+  'all':      'public',
+  'manager':  'all_managers',
+  'employee': 'all_employees',
+  'personal': 'specific'
+};
+
+var sfBannerLabels = {
+  'all':      '🌐 PUBLIC BROADCAST — File will be visible to ALL managers and employees.',
+  'manager':  '👔 MANAGER BROADCAST — File will be sent privately to ALL active managers.',
+  'employee': '👤 EMPLOYEE BROADCAST — File will be sent privately to ALL active employees.'
+};
+
+function sfSetMode(mode) {
+  sfMode = mode;
+
+  // Update audience button styles
+  ['all','manager','employee','personal'].forEach(function(m) {
+    var btn = document.getElementById('sf-mode-' + m);
+    if (btn) btn.className = (m === mode) ? 'btn-small btn-cyan' : 'btn-small';
+  });
+
+  var banner  = document.getElementById('sf-broadcast-banner');
+  var section = document.getElementById('sf-personal-section');
+
+  if (mode === 'personal') {
+    // Show person picker, hide broadcast banner
+    banner.style.display  = 'none';
+    section.style.display = 'block';
+    sfSetFilter('all');   // auto-load users when switching to personal
+  } else {
+    // Show broadcast banner, hide person picker
+    section.style.display = 'none';
+    sfSelected = {};
+    banner.textContent   = sfBannerLabels[mode];
+    banner.style.display = 'block';
+  }
+}
+
+function sfSetFilter(role) {
+  sfFilter = role;
+  ['all','manager','employee'].forEach(function(r) {
+    var btn = document.getElementById('sf-filter-' + r);
+    if (btn) btn.className = (r === role) ? 'btn-small btn-cyan' : 'btn-small';
+  });
+  sfLoadUsers();
+}
+
+function sfLoadUsers() {
+  var q = (document.getElementById('sf-search') || {}).value || '';
+  var inner = document.getElementById('sf-list-inner');
+  if (inner) inner.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-family:\'Share Tech Mono\',monospace;font-size:11px;letter-spacing:1px;">Loading...</div>';
+
+  fetch('/api/admin/users-for-send?role=' + sfFilter + '&q=' + encodeURIComponent(q), {
+    headers: {'X-Auth-Token': '{{ session_token }}'}
+  })
+    .then(function(r){ return r.json(); })
+    .then(function(users) {
+      sfAllUsers = users;
+      sfRenderList(users);
+    })
+    .catch(function() {
+      var inner = document.getElementById('sf-list-inner');
+      if (inner) inner.innerHTML = '<div style="text-align:center;padding:16px;color:var(--red);font-family:\'Share Tech Mono\',monospace;font-size:11px;">Failed to load users</div>';
+    });
+}
+
+function sfSearch() { sfLoadUsers(); }
+
+function sfRenderList(users) {
+  var inner = document.getElementById('sf-list-inner');
+  if (!inner) return;
+  if (!users.length) {
+    inner.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-family:\'Share Tech Mono\',monospace;font-size:11px;letter-spacing:1px;">No users found</div>';
+    return;
+  }
+  inner.innerHTML = users.map(function(u) {
+    var selected = !!sfSelected[u.email];
+    var roleCol  = u.role === 'manager' ? 'var(--cyan)' : 'var(--gold)';
+    return '<div onclick="sfToggleUser(\'' + escAdmin(u.email) + '\',\'' + escAdmin(u.name) + '\',\'' + u.role + '\')" ' +
+      'style="display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;' +
+      'border-bottom:1px solid var(--border);transition:background .12s;' +
+      (selected ? 'background:rgba(26,111,239,0.08);' : '') + '"' +
+      'data-email="' + escAdmin(u.email) + '">' +
+      '<div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--gold-dim),var(--cyan));' +
+        'display:flex;align-items:center;justify-content:center;font-family:\'Share Tech Mono\',monospace;font-size:11px;font-weight:700;color:#000;flex-shrink:0;">' +
+        escAdmin((u.name||'?')[0].toUpperCase()) + '</div>' +
+      '<div style="flex:1;min-width:0;">' +
+        '<div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escAdmin(u.name) + '</div>' +
+        '<div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escAdmin(u.email) + '</div>' +
+      '</div>' +
+      '<span style="font-family:\'Share Tech Mono\',monospace;font-size:9px;letter-spacing:1px;color:' + roleCol + ';flex-shrink:0;">' + u.role.toUpperCase() + '</span>' +
+      '<span style="font-size:16px;color:' + (selected ? 'var(--gold)' : 'var(--muted)') + ';flex-shrink:0;">' + (selected ? '✔' : '○') + '</span>' +
+    '</div>';
+  }).join('');
+}
+
+function sfToggleUser(email, name, role) {
+  if (sfSelected[email]) { delete sfSelected[email]; }
+  else { sfSelected[email] = {name: name, email: email, role: role}; }
+  sfRenderChips();
+  sfRenderList(sfAllUsers);
+}
+
+function sfRenderChips() {
+  var container = document.getElementById('sf-selected-chips');
+  if (!container) return;
+  var keys = Object.keys(sfSelected);
+  if (!keys.length) {
+    container.innerHTML = '<span id="sf-no-selection" style="color:var(--muted);font-size:12px;font-family:\'Rajdhani\',sans-serif;">None selected</span>';
+    return;
+  }
+  container.innerHTML = keys.map(function(email) {
+    var u = sfSelected[email];
+    return '<span style="display:inline-flex;align-items:center;gap:5px;background:rgba(26,111,239,0.1);' +
+      'border:1px solid rgba(26,111,239,0.3);border-radius:100px;padding:3px 10px 3px 8px;font-size:12px;">' +
+      '<span style="font-family:\'Share Tech Mono\',monospace;font-size:9px;color:var(--gold);">' + escAdmin(u.name) + '</span>' +
+      '<button onclick="sfToggleUser(\'' + escAdmin(email) + '\',\'' + escAdmin(u.name) + '\',\'' + u.role + '\')" ' +
+        'style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;line-height:1;padding:0 2px;">×</button>' +
+    '</span>';
+  }).join('');
+}
+
+function sfShowMsg(msg, isErr) {
+  var el = document.getElementById('sf-msg');
+  el.textContent   = msg;
+  el.className     = 'msg-box ' + (isErr ? 'err' : 'ok');
+  el.style.display = 'block';
+  setTimeout(function(){ el.style.display='none'; }, 5000);
+}
+
+function sfSend() {
+  var fileInput = document.getElementById('sf-file-input');
+  if (!fileInput.files.length) { sfShowMsg('Please choose a file to send.', true); return; }
+
+  // Validate: specific mode needs at least one recipient
+  if (sfMode === 'personal' && !Object.keys(sfSelected).length) {
+    sfShowMsg('Please select at least one recipient.', true);
+    return;
+  }
+
+  var fd = new FormData();
+  fd.append('file',     fileInput.files[0]);
+  fd.append('audience', sfAudienceMap[sfMode]);   // send correct backend key
+
+  if (sfMode === 'personal') {
+    fd.append('recipients', Object.keys(sfSelected).join(','));
+  }
+
+  var btn = document.querySelector('[onclick="sfSend()"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+
+  fetch('/api/admin/send-file', {
+    method:  'POST',
+    headers: {'X-Auth-Token': '{{ session_token }}'},
+    body:    fd
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data) {
+    if (data.error) { sfShowMsg('✖ ' + data.error, true); }
+    else {
+      sfShowMsg('✔ ' + data.message, false);
+      sfSelected = {};
+      sfRenderChips();
+      sfRenderList(sfAllUsers);
+      fileInput.value = '';
+    }
+  })
+  .catch(function(){ sfShowMsg('Network error. Please try again.', true); })
+  .finally(function() {
+    if (btn) { btn.disabled = false; btn.textContent = '📤 SEND FILE'; }
+  });
+}
+
+// ── SWITCH TAB HOOKS ─────────────────────────────────────────
+var _origSwitchTab = switchTab;
+switchTab = function(name, btn) {
+  _origSwitchTab(name, btn);
+  if (name === 'clients')     { loadAdminClients(); loadAdminEmployeesForAssign(); }
+  if (name === 'client-logs') { loadAdminMeetingLogs(); }
+};
+
+// ── ADMIN MEETING HUB ────────────────────────────────────────
+function openAdminMeetingHub() {
+  window.open('/meetings?token={{ session_token }}', '_blank');
+}
+
+// ── ADMIN CLIENT DIRECTORY ───────────────────────────────────
+var _adminClients   = [];
+var _adminEmployees = [];
+
+async function loadAdminClients() {
+  var res  = await fetch('/api/admin/clients', {headers:{'X-Auth-Token':'{{ session_token }}'}});
+  var data = await res.json();
+  _adminClients = Array.isArray(data) ? data : [];
+
+  var sel = document.getElementById('adm-assign-client');
+  sel.innerHTML = '<option value="">— Select client —</option>';
+  _adminClients.forEach(function(c) {
+    sel.innerHTML += '<option value="' + c._id + '">' + c.name + ' (' + (c.company||'') + ')</option>';
+  });
+
+  var list = document.getElementById('adm-clients-list');
+  if (!_adminClients.length) {
+    list.innerHTML = '<div style="padding:16px;color:var(--muted);font-size:12px;font-family:\'Share Tech Mono\',monospace;">No clients yet. Add one above.</div>';
+    return;
+  }
+  list.innerHTML = _adminClients.map(function(c) {
+    return '<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px;display:flex;align-items:flex-start;justify-content:space-between;">' +
+      '<div>' +
+        '<div style="font-weight:700;font-size:13px;">' + c.name + '</div>' +
+        '<div style="font-size:11px;color:var(--muted);">' + (c.company||'') + (c.email ? ' · ' + c.email : '') + (c.phone ? ' · ' + c.phone : '') + '</div>' +
+        (c.notes ? '<div style="font-size:11px;color:var(--text);margin-top:3px;">' + c.notes + '</div>' : '') +
+      '</div>' +
+      '<button onclick="adminRemoveClient(\'' + c._id + '\')" style="padding:4px 10px;background:rgba(255,51,102,.15);border:1px solid rgba(255,51,102,.4);color:#ff3366;border-radius:5px;cursor:pointer;font-size:10px;flex-shrink:0;margin-left:8px;">Remove</button>' +
+    '</div>';
+  }).join('');
+}
+
+async function loadAdminEmployeesForAssign() {
+  var res  = await fetch('/api/admin/employees', {headers:{'X-Auth-Token':'{{ session_token }}'}});
+  var data = await res.json();
+  _adminEmployees = Array.isArray(data) ? data : [];
+
+  ['adm-assign-emp', 'adm-emp-detail-select'].forEach(function(id) {
+    var sel = document.getElementById(id);
+    if (!sel) return;
+    sel.innerHTML = '<option value="">— Select employee —</option>';
+    _adminEmployees.forEach(function(u) {
+      sel.innerHTML += '<option value="' + u.email + '">' + u.name + ' (' + u.email + ')</option>';
+    });
+  });
+}
+
+async function adminAddClient() {
+  var name    = document.getElementById('adm-cl-name').value.trim();
+  var email   = document.getElementById('adm-cl-email').value.trim();
+  var phone   = document.getElementById('adm-cl-phone').value.trim();
+  var company = document.getElementById('adm-cl-company').value.trim();
+  var notes   = document.getElementById('adm-cl-notes').value.trim();
+  var msgEl   = document.getElementById('adm-cl-msg');
+  if (!name) { msgEl.style.color='#ff3366'; msgEl.textContent='Name is required.'; return; }
+
+  var res  = await fetch('/api/admin/clients', {
+    method: 'POST',
+    headers: {'X-Auth-Token':'{{ session_token }}', 'Content-Type':'application/json'},
+    body: JSON.stringify({name:name, email:email, phone:phone, company:company, notes:notes})
+  });
+  var data = await res.json();
+  if (data.success) {
+    msgEl.style.color = 'var(--cyan)';
+    msgEl.textContent = '✓ Client added.';
+    ['adm-cl-name','adm-cl-email','adm-cl-phone','adm-cl-company','adm-cl-notes'].forEach(function(id){ document.getElementById(id).value=''; });
+    loadAdminClients();
+  } else {
+    msgEl.style.color = '#ff3366';
+    msgEl.textContent = '✗ ' + (data.error || 'Failed.');
+  }
+}
+
+async function adminRemoveClient(clientId) {
+  if (!confirm('Remove this client? Past meeting logs will be kept.')) return;
+  await fetch('/api/admin/clients/' + clientId, {
+    method: 'DELETE',
+    headers: {'X-Auth-Token':'{{ session_token }}'}
+  });
+  loadAdminClients();
+}
+
+async function adminAssignClient() {
+  var clientId = document.getElementById('adm-assign-client').value;
+  var empEmail = document.getElementById('adm-assign-emp').value;
+  var msgEl    = document.getElementById('adm-assign-msg');
+  if (!clientId || !empEmail) { msgEl.style.color='#ff3366'; msgEl.textContent='Select both.'; return; }
+
+  var res  = await fetch('/api/admin/client-assignments', {
+    method: 'POST',
+    headers: {'X-Auth-Token':'{{ session_token }}', 'Content-Type':'application/json'},
+    body: JSON.stringify({client_id: clientId, employee_email: empEmail})
+  });
+  var data = await res.json();
+  if (data.success) {
+    msgEl.style.color = 'var(--cyan)';
+    msgEl.textContent = '✓ Assigned. Employee notified.';
+  } else {
+    msgEl.style.color = '#ff3366';
+    msgEl.textContent = '✗ ' + (data.error || 'Failed.');
+  }
+}
+
+async function loadEmployeeClientDetail(empEmail) {
+  var view = document.getElementById('adm-emp-detail-view');
+  if (!empEmail) { view.innerHTML = ''; return; }
+  view.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0;">Loading...</div>';
+
+  var res  = await fetch('/api/admin/employee-client-detail/' + empEmail, {headers:{'X-Auth-Token':'{{ session_token }}'}});
+  var data = await res.json();
+  if (data.error) { view.innerHTML = '<div style="color:#ff3366;font-size:12px;">' + data.error + '</div>'; return; }
+
+  var emp  = data.employee;
+  var html = '<div style="margin-bottom:12px;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:7px;">' +
+    '<div style="font-weight:700;">' + emp.name + '</div>' +
+    '<div style="font-size:11px;color:var(--muted);">' + emp.email + ' · ' + (emp.department||'') + '</div>' +
+  '</div>';
+
+  html += '<div style="font-size:10px;color:var(--gold);font-family:\'Share Tech Mono\',monospace;letter-spacing:1px;margin-bottom:6px;">ASSIGNED CLIENTS (' + data.clients.length + ')</div>';
+  if (data.clients.length) {
+    html += data.clients.map(function(c) {
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;margin-bottom:6px;">' +
+        '<div><div style="font-size:12px;font-weight:600;">' + c.name + '</div><div style="font-size:10px;color:var(--muted);">' + (c.company||'') + '</div></div>' +
+        '<button onclick="adminRemoveAssignment(\'' + empEmail + '\',\'' + c.client_id + '\')" style="padding:3px 8px;background:rgba(255,51,102,.15);border:1px solid rgba(255,51,102,.4);color:#ff3366;border-radius:4px;cursor:pointer;font-size:10px;">Remove</button>' +
+      '</div>';
+    }).join('');
+  } else {
+    html += '<div style="font-size:11px;color:var(--muted);margin-bottom:10px;">No clients assigned.</div>';
+  }
+
+  html += '<div style="font-size:10px;color:var(--gold);font-family:\'Share Tech Mono\',monospace;letter-spacing:1px;margin:10px 0 6px;">MEETING LOGS (' + data.meeting_logs.length + ')</div>';
+  if (data.meeting_logs.length) {
+    html += data.meeting_logs.map(function(l) {
+      return '<div style="padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;margin-bottom:5px;font-size:11px;">' +
+        '<div style="font-weight:600;">' + l.client_name + ' <span style="color:var(--muted);font-weight:400;">(' + (l.client_company||'') + ')</span></div>' +
+        '<div style="color:var(--muted);margin-top:2px;">' + (l.scheduled_time||'') + ' · ' + (l.agenda||'') + '</div>' +
+        '<div style="color:var(--muted);margin-top:1px;">Approved by: ' + (l.approved_by_name||'—') + '</div>' +
+      '</div>';
+    }).join('');
+  } else {
+    html += '<div style="font-size:11px;color:var(--muted);">No meeting logs.</div>';
+  }
+  view.innerHTML = html;
+}
+
+async function adminRemoveAssignment(empEmail, clientId) {
+  if (!confirm('Remove this client from the employee?')) return;
+  await fetch('/api/admin/client-assignments/remove', {
+    method: 'POST',
+    headers: {'X-Auth-Token':'{{ session_token }}', 'Content-Type':'application/json'},
+    body: JSON.stringify({employee_email: empEmail, client_id: clientId})
+  });
+  loadEmployeeClientDetail(empEmail);
+}
+
+async function loadAdminMeetingLogs() {
+  var res   = await fetch('/api/admin/client-meeting-logs', {headers:{'X-Auth-Token':'{{ session_token }}'}});
+  var logs  = await res.json();
+  var tbody = document.getElementById('adm-meeting-logs-body');
+  if (!Array.isArray(logs) || !logs.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="padding:24px;text-align:center;color:var(--muted);font-size:12px;">No meeting logs yet.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = logs.map(function(l) {
+    return '<tr style="border-bottom:1px solid rgba(255,204,0,0.08);">' +
+      '<td style="padding:10px 14px;font-size:12px;">' + l.employee_name + '<br><span style="font-size:10px;color:var(--muted);">' + (l.employee_email||'') + '</span></td>' +
+      '<td style="padding:10px 14px;font-size:12px;color:var(--gold);">' + l.client_name + '<br><span style="font-size:10px;color:var(--muted);">' + (l.client_company||'') + '</span></td>' +
+      '<td style="padding:10px 14px;font-size:11px;color:var(--muted);">' + (l.scheduled_time||'') + '</td>' +
+      '<td style="padding:10px 14px;font-size:12px;">' + (l.agenda||'—') + '</td>' +
+      '<td style="padding:10px 14px;font-size:12px;">' + (l.approved_by_name||'—') + '<br><span style="font-size:10px;color:var(--muted);">' + (l.approved_by_email||'') + '</span></td>' +
+    '</tr>';
+  }).join('');
+}
+
+// ── XAI EXPLAINABILITY ────────────────────────────────────────────────────────
+function loadXAIExplanations() {
+  var grid = document.getElementById('xai-cards-grid');
+  grid.innerHTML = '<div class="empty-state" style="padding:40px;">⏳ Loading SHAP explanations...</div>';
+
+  fetch('/api/xai/explanations', { headers: { 'X-Auth-Token': '{{ session_token }}' } })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.success || !data.explanations || data.explanations.length === 0) {
+        grid.innerHTML = '<div class="empty-state" style="padding:40px;">No SHAP data yet. Run a scan first.</div>';
+        return;
+      }
+      grid.innerHTML = data.explanations.map(function(exp) {
+        var label = exp.risk_label || 'LOW';
+        var color = label === 'CRITICAL' ? '#e0253a' :
+                    label === 'HIGH'     ? '#e0253a' :
+                    label === 'MEDIUM'   ? '#e08a00' : '#0f9e6e';
+        var feats = (exp.shap_values || []).slice(0, 8);
+        var maxAbs = Math.max.apply(null, feats.map(function(f) { return Math.abs(f.shap_value); })) || 1;
+
+        var barsHtml = feats.map(function(f) {
+          var pct     = Math.round((Math.abs(f.shap_value) / maxAbs) * 100);
+          var isRisk  = f.shap_value > 0;
+          var barCol  = isRisk ? '#e0253a' : '#0f9e6e';
+          var arrow   = isRisk ? '▲' : '▼';
+          var arrowCol= isRisk ? '#e0253a' : '#0f9e6e';
+          return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">' +
+            '<span style="width:140px;font-size:10px;color:var(--muted);font-family:\'Share Tech Mono\',monospace;text-align:right;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + f.feature + '">' + f.feature.replace(/_/g,' ') + '</span>' +
+            '<div style="flex:1;height:12px;background:var(--surface2);border-radius:3px;overflow:hidden;">' +
+              '<div style="height:100%;width:' + pct + '%;background:' + barCol + ';border-radius:3px;"></div>' +
+            '</div>' +
+            '<span style="font-size:9px;color:' + arrowCol + ';font-family:\'Share Tech Mono\',monospace;width:52px;flex-shrink:0;">' + arrow + ' ' + (f.shap_value > 0 ? '+' : '') + f.shap_value.toFixed(3) + '</span>' +
+          '</div>';
+        }).join('');
+
+        return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;">' +
+          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">' +
+            '<div>' +
+              '<div style="font-family:\'Rajdhani\',sans-serif;font-size:13px;font-weight:600;color:var(--text);">' + exp.user_email + '</div>' +
+              '<div style="font-family:\'Share Tech Mono\',monospace;font-size:10px;color:var(--muted);">Day: ' + (exp.day || '-') + '</div>' +
+            '</div>' +
+            '<div style="background:' + color + '22;color:' + color + ';border:1px solid ' + color + '44;font-family:\'Share Tech Mono\',monospace;font-size:10px;padding:3px 10px;border-radius:5px;font-weight:700;">' +
+              label + ' · ' + parseFloat(exp.risk_score || 0).toFixed(1) +
+            '</div>' +
+          '</div>' +
+          barsHtml +
+          '<div style="margin-top:10px;font-family:\'Share Tech Mono\',monospace;font-size:9px;color:var(--muted);">SHAP base value: ' + (exp.base_value || 0).toFixed(4) + ' · Updated: ' + (exp.scored_at || '-') + '</div>' +
+        '</div>';
+      }).join('');
+    })
+    .catch(function(err) {
+      grid.innerHTML = '<div class="empty-state" style="padding:40px;color:#e0253a;">Error loading XAI data: ' + err + '</div>';
+    });
+}
+
+</script>
+</body>
+</html>
