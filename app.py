@@ -3386,17 +3386,12 @@ def employee_notifications():
 
 
 # --- Run ----------------------------------------------------------------------
-
 if __name__ == "__main__":
     print("=" * 60)
     print("  XAI-ITD-DLP Framework - Module 1 Starting...")
     print("=" * 60)
-    if not check_mongo_connection():
-        print("[APP] Cannot start without MongoDB. Please start MongoDB first.")
-        import sys
-        sys.exit(1)
     normalize_existing_emails()
     print("[APP] Visit: http://127.0.0.1:5000")
     from ml.scheduler import start_scheduler
     start_scheduler(socketio_instance=socketio)
-    socketio.run(app, host="0.0.0.0", port=5000, debug=True, use_reloader=False)
+    socketio.run(app, host="0.0.0.0", port=5000, debug=False, use_reloader=False)
