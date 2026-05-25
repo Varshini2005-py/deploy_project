@@ -70,7 +70,10 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading", manag
 # ── Active session tokens — MongoDB-backed so they survive Render restarts ──
 from models.user import users_col as _users_col_ref
 _tokens_col = _users_col_ref.database["active_tokens"]
-_tokens_col.create_index("token", unique=True)
+try:
+    _tokens_col.create_index("token", unique=True)
+except Exception:
+    pass
 try:
     _tokens_col.create_index("expires_at", expireAfterSeconds=0)
 except Exception:
