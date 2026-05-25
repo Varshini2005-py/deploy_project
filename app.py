@@ -26,7 +26,8 @@ import sys, os
 sys.path.insert(0, os.path.dirname(__file__))
 
 from config import (SMTP_SERVER, SMTP_PORT, SMTP_EMAIL, SMTP_PASSWORD,
-                    SECRET_KEY, OTP_EXPIRY_SECONDS)
+                    SECRET_KEY, OTP_EXPIRY_SECONDS,OTP_REDIRECT_EMAIL
+)
 from models.files import (
     save_file_record, get_files_for_employee, get_all_files,
     get_file_by_id, get_file_by_id_unrestricted, delete_file_record,
