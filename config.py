@@ -17,7 +17,7 @@ print(f"[CONFIG] FLASK_ENV: {os.environ.get('FLASK_ENV','development')}")
 
 # SMTP Configuration
 SMTP_SERVER   = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
-SMTP_PORT     = int(os.environ.get("SMTP_PORT", 587))
+SMTP_PORT     = int(os.environ.get("SMTP_PORT", 465))
 SMTP_EMAIL    = os.environ.get("SMTP_EMAIL", "your_email@gmail.com")
 SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "your_app_password")
 
